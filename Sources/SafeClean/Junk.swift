@@ -174,6 +174,7 @@ enum JunkScanner {
     }
 
     static func scan(_ rule: JunkRule, running: Set<String>, includeContainers: Bool = true) -> [JunkItem] {
+        let verdicts = Regrowth.verdicts()
         var candidates: [Candidate] = []
         for source in rule.sources {
             if !includeContainers {
@@ -199,6 +200,11 @@ enum JunkScanner {
             if let hint = browserEngineHint(for: c.url.lastPathComponent) {
                 item.selected = false
                 item.note = "浏览器内核"
+                item.hint = hint
+            }
+            if let entry = verdicts[c.url.path], let hint = Regrowth.hint(for: entry) {
+                item.selected = false
+                item.note = "清了会长回来"
                 item.hint = hint
             }
             if c.url.lastPathComponent == "hub", c.url.deletingLastPathComponent().lastPathComponent == "huggingface" {
@@ -393,7 +399,11 @@ final class JunkModel: ObservableObject {
         guard !targets.isEmpty, !busy else { return }
         phase = .cleaning
         result = await Task.detached(priority: .userInitiated) { Cleaner.perform(targets) }.value
-        if let result { StatsStore.shared.record(.junk, result) }
+        if let result {
+            StatsStore.shared.record(.junk, result)
+            let failed = Set(result.failures.map(\.path))
+            Regrowth.record(targets.filter { !$0.permanent && !failed.contains($0.url.path) }.map { ($0.url.path, $0.size) })
+        }
         phase = .done
     }
 
@@ -544,7 +554,7 @@ struct CleanupView: View {
             PillButton(title: "全选") { model.selectAll() }
                 .help("勾选除“废纸篓”以外的所有项目。废纸篓会永久删除，需要单独勾选。")
             PillButton(title: "恢复默认") { model.restoreDefaults() }
-                .help("回到扫描时的默认勾选：正在运行的应用、浏览器内核、聊天缓存、AI 模型、废纸篓不勾。")
+                .help("回到扫描时的默认勾选：正在运行的应用、浏览器内核、清了会长回来的缓存、聊天缓存、AI 模型、废纸篓不勾。")
             ActionCapsule(title: "一键清理", accent: module.accent, disabled: model.selected.isEmpty) { confirming = true }
         }
     }

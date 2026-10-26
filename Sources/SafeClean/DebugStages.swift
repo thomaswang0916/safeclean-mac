@@ -61,6 +61,8 @@ import SwiftUI
                     state.smartCare.clutterResult = c
                 }
                 state.smartCare.phase = stage == "done" ? .done : .ready
+            case (.detective, _):
+                await state.detective.loadSample()
             case (.stats, _):
                 StatsStore.shared.loadSample()
                 state.junk.loadSample()

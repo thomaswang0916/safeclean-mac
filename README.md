@@ -4,6 +4,14 @@
 
 A native SwiftUI Mac cleaner — junk cleanup, app uninstaller, duplicate finder, disk space map. Everything goes to the Trash first, so it's always recoverable.
 
+![空间侦探](docs/screenshots/detective.jpg)
+
+## 空间侦探：回答论坛里问得最多的三个问题
+
+- **“空间一夜之间少了几十 G，被谁吃了？”** 定期记录可用空间、各位置大小和**每个程序往硬盘写了多少**，直接告诉你“过去 24 小时少了 29 GB：Docker 长了 21 GB，WeChat 写了 8 GB”。可以开后台记录（每 3 小时一次，低优先级，不联网）。
+- **“系统数据为什么这么大？”** 把“设置 → 存储空间”里的“系统数据”拆开：本地快照、待安装的系统更新、交换文件、休眠镜像、崩溃转储、系统资源下载、临时文件、Docker 虚拟磁盘、模拟器、Spotlight 索引，每项写明能不能动、怎么处理。
+- **“清理软件是不是白清？”** 清理后过 1 天、7 天复查。很快长回来的缓存（清了也腾不出空间）会被标记出来，以后在“清理”里默认不勾。
+
 ![智能呵护](docs/screenshots/smartCare.jpg)
 
 ## 功能
@@ -16,6 +24,7 @@ A native SwiftUI Mac cleaner — junk cleanup, app uninstaller, duplicate finder
 | 应用程序 | 彻底卸载（含登录项、扩展、App Group、启动代理等残留）、检查更新（Sparkle appcast 和 App Store） |
 | 整理杂乱 | 大文件、重复文件（内容哈希）、相似图片（系统 Vision 图像特征）、30 天以上的旧下载 |
 | 空间透镜 | 方块图显示空间分布，点文件夹逐层进入，勾选后移到废纸篓 |
+| 空间侦探 | 空间变化追踪 + 写入进程归因、系统数据拆解、白清检测 |
 | 统计数据 | Mac 健康度、累计清理量、处理记录、优化建议（比如 90 天没打开的应用） |
 
 | | |
@@ -30,6 +39,7 @@ A native SwiftUI Mac cleaner — junk cleanup, app uninstaller, duplicate finder
 - 重复文件跳过 Git 仓库、依赖和构建目录、剪辑软件素材库，每组保留最早的一份
 - 卸载前要求先退出应用；和别的应用共享的 App Group 默认不勾
 - 需要管理员权限的维护任务用 macOS 自己的密码框，应用拿不到密码
+- 空间侦探的记录只存在本机 `~/Library/Application Support/SafeClean/`；后台记录默认关闭，关掉时会删除对应的启动项
 - 不联网上传任何数据；联网只用于检查应用更新（读取应用自己声明的 Sparkle 更新源和 App Store 公开接口）
 
 ## 安装和编译
@@ -56,6 +66,9 @@ open SafeClean.app
 ```bash
 # 只读自检：列出每类垃圾的数量和大小，不删除任何东西
 SafeClean.app/Contents/MacOS/SafeClean --selftest
+
+# 记录一次空间快照（后台记录就是定时调用它）
+SafeClean.app/Contents/MacOS/SafeClean --snapshot
 
 # 把东西从废纸篓放回原处（只接受废纸篓里的路径，原位置已有东西时拒绝）
 SafeClean.app/Contents/MacOS/SafeClean --put-back ~/.Trash/某个文件 ~/原来的位置/某个文件

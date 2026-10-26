@@ -11,7 +11,7 @@ struct Feature: Identifiable {
 
 /// 左侧图标栏里的每个功能模块，以及它的配色、插画和介绍。
 enum Module: String, CaseIterable, Identifiable {
-    case smartCare, cleanup, performance, applications, clutter, spaceLens, stats
+    case smartCare, cleanup, performance, applications, clutter, spaceLens, detective, stats
 
     var id: String { rawValue }
 
@@ -23,6 +23,7 @@ enum Module: String, CaseIterable, Identifiable {
         case .applications: "应用程序"
         case .clutter: "整理杂乱"
         case .spaceLens: "空间透镜"
+        case .detective: "空间侦探"
         case .stats: "统计数据"
         }
     }
@@ -35,6 +36,7 @@ enum Module: String, CaseIterable, Identifiable {
         case .applications: "彻底卸载应用和它留下的文件，检查哪些应用有新版本。"
         case .clutter: "找出大文件、重复文件、相似照片和下载里的旧东西。"
         case .spaceLens: "一眼看清空间都被谁占了，一层层点进去找到元凶。"
+        case .detective: "空间去哪了、系统数据里是什么、哪些清理是白清。"
         case .stats: "清理记录和优化建议。"
         }
     }
@@ -48,6 +50,7 @@ enum Module: String, CaseIterable, Identifiable {
         case .applications: "square.grid.2x2.fill"
         case .clutter: "folder.fill"
         case .spaceLens: "circle.hexagongrid.fill"
+        case .detective: "binoculars.fill"
         case .stats: "chart.line.uptrend.xyaxis"
         }
     }
@@ -61,6 +64,7 @@ enum Module: String, CaseIterable, Identifiable {
         case .applications: "square.grid.2x2.fill"
         case .clutter: "folder.fill"
         case .spaceLens: "circle.hexagongrid.fill"
+        case .detective: "binoculars.fill"
         case .stats: "chart.line.uptrend.xyaxis"
         }
     }
@@ -74,6 +78,7 @@ enum Module: String, CaseIterable, Identifiable {
         case .applications: [Color(hex: 0x0A1A42), Color(hex: 0x112E7A), Color(hex: 0x1B48C2)]
         case .clutter: [Color(hex: 0x052A31), Color(hex: 0x0A5059), Color(hex: 0x0E7470)]
         case .spaceLens: [Color(hex: 0x170D45), Color(hex: 0x2C1C82), Color(hex: 0x4726A0)]
+        case .detective: [Color(hex: 0x081A2B), Color(hex: 0x0E3550), Color(hex: 0x135A70)]
         case .stats: [Color(hex: 0x14112E), Color(hex: 0x2A2360), Color(hex: 0x3A2A6E)]
         }
     }
@@ -87,6 +92,7 @@ enum Module: String, CaseIterable, Identifiable {
         case .applications: Color(hex: 0x6AA8FF)
         case .clutter: Color(hex: 0x37E0C8)
         case .spaceLens: Color(hex: 0xA48BFF)
+        case .detective: Color(hex: 0x5CD6FF)
         case .stats: Color(hex: 0x8B9CFF)
         }
     }
@@ -132,6 +138,7 @@ enum Module: String, CaseIterable, Identifiable {
                 Feature(icon: "eye.fill", title: "显示被隐藏的文件"),
                 Feature(icon: "folder.fill", title: "大文件夹一览"),
             ]
+        case .detective: []
         case .stats: []
         }
     }

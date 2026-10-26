@@ -15,6 +15,7 @@ final class AppState: ObservableObject {
     let lens = SpaceLensModel()
     let performance = PerformanceModel()
     let stats = StatsModel()
+    let detective = DetectiveModel()
     private(set) lazy var smartCare = SmartCareModel(state: self)
 
     func refreshPermissions() {
@@ -62,6 +63,7 @@ struct RootView: View {
         case .applications: ApplicationsView(apps: state.apps, updates: state.updates, disk: state.disk)
         case .clutter: ClutterView(model: state.clutter, disk: state.disk)
         case .spaceLens: SpaceLensView(model: state.lens, disk: state.disk)
+        case .detective: DetectiveView(model: state.detective, state: state)
         case .stats: StatsView(model: state.stats, state: state, disk: state.disk)
         }
     }

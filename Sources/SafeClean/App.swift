@@ -8,8 +8,18 @@ enum Entry {
         if let i = CommandLine.arguments.firstIndex(of: "--put-back"), CommandLine.arguments.count > i + 2 {
             exit(PutBack.run(from: CommandLine.arguments[i + 1], to: CommandLine.arguments[i + 2]))
         }
+        // 后台定时记录（由启动代理调用）：记一次空间快照，顺便复查之前清掉的东西长回来没有
+        if CommandLine.arguments.contains("--snapshot") {
+            SpaceRecorder.record()
+            Regrowth.runChecks()
+            return
+        }
         if let i = CommandLine.arguments.firstIndex(of: "--test-clutter"), CommandLine.arguments.count > i + 1 {
             SelfTest.clutter(URL(fileURLWithPath: CommandLine.arguments[i + 1]))
+            return
+        }
+        if CommandLine.arguments.contains("--test-detective") {
+            SelfTest.detective()
             return
         }
         if CommandLine.arguments.contains("--test-updates") {
@@ -85,6 +95,31 @@ enum PutBack {
 // MARK: - 自检（只读，不删除任何东西）
 
 enum SelfTest {
+    static func detective() {
+        let snaps = SpaceRecorder.loadSnapshots()
+        print("快照数:", snaps.count, "最后一次位置数:", snaps.last?.locations.count ?? 0, "进程数:", snaps.last?.processes.count ?? 0)
+        if let change = SpaceComparer.compare(snaps, since: .distantPast) {
+            print("可用空间变化（正数=少了）:", FS.format(change.freeLost))
+            change.growth.prefix(5).forEach { print("  变大:", $0.title, "+\(FS.format($0.delta))") }
+            change.writers.prefix(5).forEach { print("  写入:", $0.title, FS.format($0.delta)) }
+        }
+        for item in SystemDataInspector.inspect() {
+            print("系统数据:", item.title, item.size.map(FS.format) ?? "—")
+        }
+        if let path = CommandLine.arguments.drop(while: { $0 != "--fake-regrowth" }).dropFirst().first {
+            // 伪造一条“两天前清理过”的记录，验证复查和清理模块的默认勾选
+            var all = Regrowth.load()
+            all.append(CleanedEntry(path: path, size: 100_000_000, date: Date().addingTimeInterval(-2 * 86400)))
+            DetectiveStore.save(all, to: DetectiveStore.regrowthURL)
+            let checked = Regrowth.runChecks().first { $0.path == path }
+            print("复查:", checked.map { "清掉 \(FS.format($0.size))，一天后 \(FS.format($0.after1d ?? 0))" } ?? "无")
+            let items = JunkScanner.scan(JunkRules.all[0], running: [], includeContainers: false)
+            if let item = items.first(where: { $0.url.path == path }) {
+                print("清理模块:", item.selected ? "[x]" : "[ ]", item.name, item.note ?? "", item.hint ?? "")
+            }
+        }
+    }
+
     static func clutter(_ root: URL) {
         let flag = CancelFlag()
         let entries = ClutterScanner.walk(root: root, minSize: 1, cancel: flag) { _ in }
