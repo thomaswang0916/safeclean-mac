@@ -1,0 +1,6 @@
+.build/
+*.app
+.DS_Store
+.swiftpm/
+# 本地笔记（不公开）
+notes/
