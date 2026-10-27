@@ -39,20 +39,21 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 <dict>
   <key>CFBundleExecutable</key><string>SafeClean</string>
   <key>CFBundleIdentifier</key><string>${BUNDLE_ID}</string>
-  <key>CFBundleName</key><string>放心清理</string>
-  <key>CFBundleDisplayName</key><string>放心清理</string>
+  <key>CFBundleName</key><string>SafeClean</string>
+  <key>CFBundleDisplayName</key><string>SafeClean</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>1.0.0</string>
   <key>CFBundleVersion</key><string>1</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
-  <key>CFBundleDevelopmentRegion</key><string>zh_CN</string>
+  <key>CFBundleDevelopmentRegion</key><string>en</string>
+  <key>CFBundleAllowMixedLocalizations</key><true/>
   <key>LSMinimumSystemVersion</key><string>14.0</string>
   <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
   <key>NSHighResolutionCapable</key><true/>
-  <key>NSDesktopFolderUsageDescription</key><string>扫描桌面上的大文件和重复文件。</string>
-  <key>NSDocumentsFolderUsageDescription</key><string>扫描文稿中的大文件和重复文件。</string>
-  <key>NSDownloadsFolderUsageDescription</key><string>扫描下载文件夹中的旧文件和重复文件。</string>
-  <key>NSAppDataUsageDescription</key><string>扫描沙盒应用容器里的缓存和日志，以及卸载应用时找到它留下的文件。</string>
+  <key>NSDesktopFolderUsageDescription</key><string>Scan your Desktop for large and duplicate files.</string>
+  <key>NSDocumentsFolderUsageDescription</key><string>Scan your Documents for large and duplicate files.</string>
+  <key>NSDownloadsFolderUsageDescription</key><string>Scan Downloads for old and duplicate files.</string>
+  <key>NSAppDataUsageDescription</key><string>Scan caches and logs inside app containers, and find leftover files when uninstalling apps.</string>
 </dict>
 </plist>
 PLIST

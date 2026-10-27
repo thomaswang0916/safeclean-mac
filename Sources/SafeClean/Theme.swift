@@ -17,27 +17,27 @@ enum Module: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .smartCare: "智能呵护"
-        case .cleanup: "清理"
-        case .performance: "性能"
-        case .applications: "应用程序"
-        case .clutter: "整理杂乱"
-        case .spaceLens: "空间透镜"
-        case .detective: "空间侦探"
-        case .stats: "统计数据"
+        case .smartCare: L("智能呵护", "Smart Care")
+        case .cleanup: L("清理", "Cleanup")
+        case .performance: L("性能", "Performance")
+        case .applications: L("应用程序", "Applications")
+        case .clutter: L("整理杂乱", "My Clutter")
+        case .spaceLens: L("空间透镜", "Space Lens")
+        case .detective: L("空间侦探", "Space Detective")
+        case .stats: L("统计数据", "Statistics")
         }
     }
 
     var tagline: String {
         switch self {
-        case .smartCare: "一次扫描，把垃圾、杂乱、更新和性能问题一起找出来。"
-        case .cleanup: "清掉缓存、日志和开发残留，所有东西都先进废纸篓，随时能放回。"
-        case .performance: "运行维护任务，管理后台项，找出拖慢 Mac 的应用。"
-        case .applications: "彻底卸载应用和它留下的文件，检查哪些应用有新版本。"
-        case .clutter: "找出大文件、重复文件、相似照片和下载里的旧东西。"
-        case .spaceLens: "一眼看清空间都被谁占了，一层层点进去找到元凶。"
-        case .detective: "空间去哪了、系统数据里是什么、哪些清理是白清。"
-        case .stats: "清理记录和优化建议。"
+        case .smartCare: L("一次扫描，把垃圾、杂乱、更新和性能问题一起找出来。", "One scan finds junk, clutter, outdated apps and performance issues all at once.")
+        case .cleanup: L("清掉缓存、日志和开发残留，所有东西都先进废纸篓，随时能放回。", "Clear caches, logs and developer leftovers. Everything goes to the Trash first, so you can always put it back.")
+        case .performance: L("运行维护任务，管理后台项，找出拖慢 Mac 的应用。", "Run maintenance tasks, manage background items and find the apps slowing your Mac down.")
+        case .applications: L("彻底卸载应用和它留下的文件，检查哪些应用有新版本。", "Fully uninstall apps along with the files they leave behind, and check which apps have updates.")
+        case .clutter: L("找出大文件、重复文件、相似照片和下载里的旧东西。", "Find large files, duplicates, similar photos and old stuff in Downloads.")
+        case .spaceLens: L("一眼看清空间都被谁占了，一层层点进去找到元凶。", "See at a glance what's taking up space, then drill down folder by folder to find the culprit.")
+        case .detective: L("空间去哪了、系统数据里是什么、哪些清理是白清。", "Where your space went, what's inside System Data, and which cleanups are pointless.")
+        case .stats: L("清理记录和优化建议。", "Cleanup history and recommendations.")
         }
     }
 
@@ -101,42 +101,42 @@ enum Module: String, CaseIterable, Identifiable {
         switch self {
         case .smartCare:
             [
-                Feature(icon: "bubbles.and.sparkles.fill", title: "系统垃圾"),
-                Feature(icon: "doc.on.doc.fill", title: "重复下载"),
-                Feature(icon: "arrow.down.app.fill", title: "应用更新"),
-                Feature(icon: "bolt.fill", title: "性能建议"),
+                Feature(icon: "bubbles.and.sparkles.fill", title: L("系统垃圾", "System Junk")),
+                Feature(icon: "doc.on.doc.fill", title: L("重复下载", "Duplicate Downloads")),
+                Feature(icon: "arrow.down.app.fill", title: L("应用更新", "App Updates")),
+                Feature(icon: "bolt.fill", title: L("性能建议", "Performance Tips")),
             ]
         case .cleanup:
             [
-                Feature(icon: "archivebox.fill", title: "应用缓存与日志"),
-                Feature(icon: "hammer.fill", title: "开发者垃圾"),
-                Feature(icon: "bandage.fill", title: "失效的启动项"),
-                Feature(icon: "trash.fill", title: "废纸篓"),
+                Feature(icon: "archivebox.fill", title: L("应用缓存与日志", "App Caches & Logs")),
+                Feature(icon: "hammer.fill", title: L("开发者垃圾", "Developer Junk")),
+                Feature(icon: "bandage.fill", title: L("失效的启动项", "Broken Login Items")),
+                Feature(icon: "trash.fill", title: L("废纸篓", "Trash")),
             ]
         case .performance:
             [
-                Feature(icon: "wrench.and.screwdriver.fill", title: "维护任务"),
-                Feature(icon: "switch.2", title: "后台启动项"),
-                Feature(icon: "gauge.with.dots.needle.67percent", title: "高耗能应用"),
+                Feature(icon: "wrench.and.screwdriver.fill", title: L("维护任务", "Maintenance Tasks")),
+                Feature(icon: "switch.2", title: L("后台启动项", "Background Items")),
+                Feature(icon: "gauge.with.dots.needle.67percent", title: L("高耗能应用", "Heavy Consumers")),
             ]
         case .applications:
             [
-                Feature(icon: "xmark.bin.fill", title: "彻底卸载"),
-                Feature(icon: "arrow.down.app.fill", title: "检查更新"),
-                Feature(icon: "puzzlepiece.extension.fill", title: "清理残留"),
+                Feature(icon: "xmark.bin.fill", title: L("彻底卸载", "Complete Uninstall")),
+                Feature(icon: "arrow.down.app.fill", title: L("检查更新", "Update Check")),
+                Feature(icon: "puzzlepiece.extension.fill", title: L("清理残留", "Leftover Cleanup")),
             ]
         case .clutter:
             [
-                Feature(icon: "doc.fill", title: "大型文件"),
-                Feature(icon: "doc.on.doc.fill", title: "重复文件"),
-                Feature(icon: "photo.on.rectangle.angled", title: "相似图片"),
-                Feature(icon: "arrow.down.circle.fill", title: "旧的下载项"),
+                Feature(icon: "doc.fill", title: L("大型文件", "Large Files")),
+                Feature(icon: "doc.on.doc.fill", title: L("重复文件", "Duplicates")),
+                Feature(icon: "photo.on.rectangle.angled", title: L("相似图片", "Similar Photos")),
+                Feature(icon: "arrow.down.circle.fill", title: L("旧的下载项", "Old Downloads")),
             ]
         case .spaceLens:
             [
-                Feature(icon: "square.grid.3x3.square", title: "存储空间分布图"),
-                Feature(icon: "eye.fill", title: "显示被隐藏的文件"),
-                Feature(icon: "folder.fill", title: "大文件夹一览"),
+                Feature(icon: "square.grid.3x3.square", title: L("存储空间分布图", "Storage Map")),
+                Feature(icon: "eye.fill", title: L("显示被隐藏的文件", "Hidden Files Included")),
+                Feature(icon: "folder.fill", title: L("大文件夹一览", "Largest Folders")),
             ]
         case .detective: []
         case .stats: []
@@ -344,7 +344,7 @@ struct FeatureRow: View {
 /// 介绍页：左边插画，右边标题、说明、功能列表，底部中间大圆按钮。
 struct ModuleIntro<Accessory: View>: View {
     let module: Module
-    var buttonTitle = "扫描"
+    var buttonTitle = L("扫描", "Scan")
     let action: () -> Void
     @ViewBuilder var accessory: Accessory
 
@@ -369,7 +369,7 @@ struct ModuleIntro<Accessory: View>: View {
 }
 
 extension ModuleIntro where Accessory == EmptyView {
-    init(module: Module, buttonTitle: String = "扫描", action: @escaping () -> Void) {
+    init(module: Module, buttonTitle: String = L("扫描", "Scan"), action: @escaping () -> Void) {
         self.init(module: module, buttonTitle: buttonTitle, action: action) { EmptyView() }
     }
 }
@@ -420,7 +420,7 @@ struct ScanningStage: View {
                     .monospacedDigit()
             }
         } bottom: {
-            OrbButton(title: stop == nil ? "" : "停止", accent: module.accent, busy: true, progress: progress) { stop?() }
+            OrbButton(title: stop == nil ? "" : L("停止", "Stop"), accent: module.accent, busy: true, progress: progress) { stop?() }
                 .allowsHitTesting(stop != nil)
         }
     }
@@ -481,11 +481,11 @@ struct PermissionBanner: View {
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: "lock.shield.fill").foregroundStyle(Color(hex: 0xFFC46B))
-            Text("没有“完全磁盘访问权限”，废纸篓、邮件附件、iOS 备份等位置扫描不到。")
+            Text(L("没有“完全磁盘访问权限”，废纸篓、邮件附件、iOS 备份等位置扫描不到。", "No Full Disk Access — the Trash, Mail attachments, iOS backups and some other locations can't be scanned."))
                 .font(.system(size: 13))
             Spacer(minLength: 8)
-            PillButton(title: "去设置") { Permissions.openFullDiskAccessSettings() }
-            PillButton(title: "重新打开") { Permissions.relaunch() }
+            PillButton(title: L("去设置", "Open Settings")) { Permissions.openFullDiskAccessSettings() }
+            PillButton(title: L("重新打开", "Relaunch")) { Permissions.relaunch() }
         }
         .foregroundStyle(.white)
         .padding(.horizontal, 14)
@@ -499,8 +499,12 @@ enum DebugFlags {
     #if DEBUG
         static var hideBanner: Bool { ProcessInfo.processInfo.environment["SAFECLEAN_HIDE_BANNER"] != nil }
         static var deviceName: String? { ProcessInfo.processInfo.environment["SAFECLEAN_DEVICE_NAME"] }
+        /// 截图 / 录演示视频时为真：所有会改动磁盘或系统的操作都只是假装执行
+        static let readOnly: Bool = ProcessInfo.processInfo.environment["SAFECLEAN_SNAPSHOT"] != nil
+            || ProcessInfo.processInfo.environment["SAFECLEAN_DEMO"] != nil
     #else
         static let hideBanner = false
         static let deviceName: String? = nil
+        static let readOnly = false
     #endif
 }

@@ -108,6 +108,7 @@ enum SpaceRecorder {
 
     @discardableResult
     static func record(progress: ((String) -> Void)? = nil) -> [SpaceSnapshot] {
+        guard !DebugFlags.readOnly else { return loadSnapshots() }
         var all = loadSnapshots()
         all.append(takeSnapshot(progress: progress))
         if all.count > DetectiveStore.maxSnapshots { all.removeFirst(all.count - DetectiveStore.maxSnapshots) }
@@ -136,11 +137,11 @@ struct SpaceChange {
 enum SpaceComparer {
     /// 系统进程的中文名
     static let friendlyNames: [String: String] = [
-        "mds_stores": "聚焦索引（Spotlight）", "mds": "聚焦索引（Spotlight）", "corespotlightd": "聚焦索引（Spotlight）",
-        "mdworker_shared": "聚焦索引（Spotlight）", "backupd": "时间机器", "cloudd": "iCloud 同步", "bird": "iCloud 云盘",
-        "nsurlsessiond": "系统后台下载", "softwareupdated": "系统更新", "photoanalysisd": "照片分析", "photolibraryd": "照片图库",
-        "cfprefsd": "偏好设置服务", "identityservicesd": "iMessage / FaceTime 服务", "usernotificationsd": "通知中心",
-        "lsd": "启动服务", "kernel_task": "系统内核", "Autoupdate": "应用自动更新（Sparkle）", "mediaanalysisd": "照片 / 视频分析",
+        "mds_stores": L("聚焦索引（Spotlight）", "Spotlight indexing"), "mds": L("聚焦索引（Spotlight）", "Spotlight indexing"), "corespotlightd": L("聚焦索引（Spotlight）", "Spotlight indexing"),
+        "mdworker_shared": L("聚焦索引（Spotlight）", "Spotlight indexing"), "backupd": L("时间机器", "Time Machine"), "cloudd": L("iCloud 同步", "iCloud sync"), "bird": L("iCloud 云盘", "iCloud Drive"),
+        "nsurlsessiond": L("系统后台下载", "Background downloads"), "softwareupdated": L("系统更新", "Software Update"), "photoanalysisd": L("照片分析", "Photos analysis"), "photolibraryd": L("照片图库", "Photos library"),
+        "cfprefsd": L("偏好设置服务", "Preferences service"), "identityservicesd": L("iMessage / FaceTime 服务", "iMessage / FaceTime service"), "usernotificationsd": L("通知中心", "Notification Center"),
+        "lsd": L("启动服务", "Launch Services"), "kernel_task": L("系统内核", "Kernel"), "Autoupdate": L("应用自动更新（Sparkle）", "App auto-update (Sparkle)"), "mediaanalysisd": L("照片 / 视频分析", "Photo / video analysis"),
         "com.docker.backend": "Docker", "com.docker.virtualization": "Docker", "dockerd": "Docker",
     ]
 
@@ -155,16 +156,17 @@ enum SpaceComparer {
         let last = (location as NSString).lastPathComponent
         let parent = ((location as NSString).deletingLastPathComponent as NSString).lastPathComponent
         let systemNames: [String: String] = [
-            "/System/Volumes/VM": "交换文件和休眠镜像", "/cores": "崩溃转储", "/Library/Updates": "系统更新残留",
-            "/System/Library/AssetsV2": "系统资源下载", "/Applications": "应用程序", "~/.Trash": "废纸篓",
+            "/System/Volumes/VM": L("交换文件和休眠镜像", "Swap & sleep image"), "/cores": L("崩溃转储", "Crash dumps"), "/Library/Updates": L("系统更新残留", "Update leftovers"),
+            "/System/Library/AssetsV2": L("系统资源下载", "System asset downloads"), "/Applications": L("应用程序", "Applications"), "~/.Trash": L("废纸篓", "Trash"),
         ]
         if let name = systemNames[location] { return name }
-        if location == SpaceRecorder.userTempRoot.map({ FS.abbreviate($0.path) }) { return "系统临时文件" }
+        if location == SpaceRecorder.userTempRoot.map({ FS.abbreviate($0.path) }) { return L("系统临时文件", "System temporary files") }
         if last.contains(".") {
             // Group Containers 的目录名前面带团队 ID（比如 5A4RE8SF68.com.tencent.xinWeChat），去掉再试
             let candidates = [last, last.split(separator: ".").dropFirst().joined(separator: ".")]
             if let app = candidates.lazy.compactMap({ NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0) }).first {
-                return "\(app.deletingPathExtension().lastPathComponent)（\(parent)）"
+                let name = app.deletingPathExtension().lastPathComponent
+                return L("\(name)（\(parent)）", "\(name) (\(parent))")
             }
         }
         return location
@@ -243,99 +245,99 @@ enum SystemDataInspector {
         if !snaps.backups.isEmpty {
             items.append(
                 SystemDataItem(
-                    id: "tm", icon: "clock.arrow.circlepath", title: "时间机器本地快照（\(snaps.backups.count) 个）", size: nil,
-                    detail: "没连备份盘时，时间机器先把备份存在本机。系统会在空间不够时自动删除，属于“可清除”空间。",
-                    safe: "可以删，删了只是少了本地的历史版本", action: .admin(command: "/usr/bin/tmutil deletelocalsnapshots /", label: "删除本地快照")))
+                    id: "tm", icon: "clock.arrow.circlepath", title: L("时间机器本地快照（\(snaps.backups.count) 个）", "Time Machine local snapshots (\(snaps.backups.count))"), size: nil,
+                    detail: L("没连备份盘时，时间机器先把备份存在本机。系统会在空间不够时自动删除，属于“可清除”空间。", "When the backup disk isn't connected, Time Machine keeps backups on this Mac. macOS deletes them automatically when space runs low — they count as purgeable space."),
+                    safe: L("可以删，删了只是少了本地的历史版本", "Safe to delete — you only lose local history"), action: .admin(command: "/usr/bin/tmutil deletelocalsnapshots /", label: L("删除本地快照", "Delete Local Snapshots"))))
         }
         if snaps.updates.contains(where: { $0.contains("MSUPrepareUpdate") }) || !snaps.updates.isEmpty {
             let pending = snaps.updates.contains { $0.contains("MSUPrepareUpdate") }
             items.append(
                 SystemDataItem(
-                    id: "osupdate", icon: "arrow.down.circle", title: pending ? "已下载、等待安装的系统更新" : "系统更新快照（\(snaps.updates.count) 个）",
+                    id: "osupdate", icon: "arrow.down.circle", title: pending ? L("已下载、等待安装的系统更新", "macOS update downloaded and waiting to install") : L("系统更新快照（\(snaps.updates.count) 个）", "Software update snapshots (\(snaps.updates.count))"),
                     size: nil,
-                    detail: pending ? "macOS 已经把新版本下载并准备好了，安装完成后这部分空间会释放。" : "升级系统时留下的回退快照，系统会在之后自动清理。",
-                    safe: pending ? "去“软件更新”安装即可释放" : "不用管，系统会自己处理",
+                    detail: pending ? L("macOS 已经把新版本下载并准备好了，安装完成后这部分空间会释放。", "macOS has downloaded and prepared a new version. This space is freed once it's installed.") : L("升级系统时留下的回退快照，系统会在之后自动清理。", "Rollback snapshots left by a system update. macOS removes them later on its own."),
+                    safe: pending ? L("去“软件更新”安装即可释放", "Install it in Software Update to free the space") : L("不用管，系统会自己处理", "Leave it — macOS handles it"),
                     action: pending
-                        ? .openURL(URL(string: "x-apple.systempreferences:com.apple.Software-Update-Settings.extension")!, label: "打开软件更新") : .none))
+                        ? .openURL(URL(string: "x-apple.systempreferences:com.apple.Software-Update-Settings.extension")!, label: L("打开软件更新", "Open Software Update")) : .none))
         }
         if purgeable > 500_000_000 {
             items.append(
                 SystemDataItem(
-                    id: "purgeable", icon: "arrow.3.trianglepath", title: "可清除空间", size: purgeable,
-                    detail: "快照、iCloud 已上传文件的本地副本等。磁盘紧张时系统会自动释放，所以“可用空间”有时会比想象中多。",
-                    safe: "不用手动处理", action: .none))
+                    id: "purgeable", icon: "arrow.3.trianglepath", title: L("可清除空间", "Purgeable space"), size: purgeable,
+                    detail: L("快照、iCloud 已上传文件的本地副本等。磁盘紧张时系统会自动释放，所以“可用空间”有时会比想象中多。", "Snapshots, local copies of files already in iCloud, and similar. macOS frees it when the disk gets tight, so available space can be more than it looks."),
+                    safe: L("不用手动处理", "Nothing to do"), action: .none))
         }
         let swap = swapUsed()
         let vm = FS.size(of: URL(fileURLWithPath: "/System/Volumes/VM"))
         items.append(
             SystemDataItem(
-                id: "swap", icon: "memorychip", title: "交换文件（虚拟内存）", size: swap,
-                detail: "内存不够时，系统把暂时不用的内存内容写到硬盘上。开的应用越多、越吃内存，这里越大。",
-                safe: "不能直接删；退出占内存的应用或重启后会变小", action: .gotoPerformance))
+                id: "swap", icon: "memorychip", title: L("交换文件（虚拟内存）", "Swap (virtual memory)"), size: swap,
+                detail: L("内存不够时，系统把暂时不用的内存内容写到硬盘上。开的应用越多、越吃内存，这里越大。", "When RAM runs short, macOS writes idle memory to disk. The more memory-hungry apps you run, the bigger this gets."),
+                safe: L("不能直接删；退出占内存的应用或重启后会变小", "Can't be deleted directly; it shrinks when you quit heavy apps or restart"), action: .gotoPerformance))
         let sleepimage = URL(fileURLWithPath: "/System/Volumes/VM/sleepimage")
         if FS.exists(sleepimage) {
             items.append(
                 SystemDataItem(
-                    id: "sleepimage", icon: "moon.zzz", title: "休眠镜像", size: FS.size(of: sleepimage),
-                    detail: "合盖深度休眠时用来保存内存内容，大小约等于内存。", safe: "系统需要，别动", action: .none))
+                    id: "sleepimage", icon: "moon.zzz", title: L("休眠镜像", "Sleep image"), size: FS.size(of: sleepimage),
+                    detail: L("合盖深度休眠时用来保存内存内容，大小约等于内存。", "Holds the contents of memory during deep sleep. About the size of your RAM."), safe: L("系统需要，别动", "macOS needs it — leave it"), action: .none))
         } else if vm > swap + 500_000_000 {
             items.append(
                 SystemDataItem(
-                    id: "vm", icon: "moon.zzz", title: "其他虚拟内存文件", size: vm - swap, detail: "休眠和内存管理用的文件。", safe: "系统需要，别动",
+                    id: "vm", icon: "moon.zzz", title: L("其他虚拟内存文件", "Other virtual memory files"), size: vm - swap, detail: L("休眠和内存管理用的文件。", "Files used for sleep and memory management."), safe: L("系统需要，别动", "macOS needs it — leave it"),
                     action: .none))
         }
         let cores = FS.size(of: URL(fileURLWithPath: "/cores"))
         if cores > 0 {
             items.append(
                 SystemDataItem(
-                    id: "cores", icon: "ant", title: "崩溃转储（/cores）", size: cores,
-                    detail: "程序崩溃时生成的完整内存转储，单个就可能几个 GB，只有开发者调试时才有用。", safe: "可以删",
-                    action: .admin(command: "/bin/rm -rf /cores/core.*", label: "删除崩溃转储")))
+                    id: "cores", icon: "ant", title: L("崩溃转储（/cores）", "Crash dumps (/cores)"), size: cores,
+                    detail: L("程序崩溃时生成的完整内存转储，单个就可能几个 GB，只有开发者调试时才有用。", "Full memory dumps written when a program crashes. Each can be several GB and is only useful for debugging."), safe: L("可以删", "Safe to delete"),
+                    action: .admin(command: "/bin/rm -rf /cores/core.*", label: L("删除崩溃转储", "Delete Crash Dumps"))))
         }
         let assets = FS.size(of: URL(fileURLWithPath: "/System/Library/AssetsV2"))
         if assets > 0 {
             items.append(
                 SystemDataItem(
-                    id: "assets", icon: "square.and.arrow.down.on.square", title: "系统资源下载", size: assets,
-                    detail: "字体、Siri 语音、Apple 智能模型、系统更新包等按需下载的资源，由系统管理。", safe: "别手动删，系统会自己清理过期的",
+                    id: "assets", icon: "square.and.arrow.down.on.square", title: L("系统资源下载", "System asset downloads"), size: assets,
+                    detail: L("字体、Siri 语音、Apple 智能模型、系统更新包等按需下载的资源，由系统管理。", "Fonts, Siri voices, Apple Intelligence models, update payloads and other on-demand downloads managed by macOS."), safe: L("别手动删，系统会自己清理过期的", "Don't delete by hand — macOS cleans up stale ones"),
                     action: .reveal(URL(fileURLWithPath: "/System/Library/AssetsV2"))))
         }
         let updates = FS.size(of: URL(fileURLWithPath: "/Library/Updates"))
         if updates > 100_000_000 {
             items.append(
                 SystemDataItem(
-                    id: "updates", icon: "shippingbox", title: "系统更新残留（/Library/Updates）", size: updates,
-                    detail: "下载过但没装完的更新包。", safe: "装完更新后会清掉；确认不装可以删",
+                    id: "updates", icon: "shippingbox", title: L("系统更新残留（/Library/Updates）", "Update leftovers (/Library/Updates)"), size: updates,
+                    detail: L("下载过但没装完的更新包。", "Update packages that were downloaded but never finished installing."), safe: L("装完更新后会清掉；确认不装可以删", "Cleared after updating; safe to delete if you won't install it"),
                     action: .reveal(URL(fileURLWithPath: "/Library/Updates"))))
         }
         if let temp = SpaceRecorder.userTempRoot {
             items.append(
                 SystemDataItem(
-                    id: "tmp", icon: "tray.full", title: "系统临时文件和缓存（/var/folders）", size: FS.size(of: temp),
-                    detail: "系统和应用的临时文件，很多在重启时清掉。", safe: "重启是最安全的清理方式", action: .reveal(temp)))
+                    id: "tmp", icon: "tray.full", title: L("系统临时文件和缓存（/var/folders）", "System temp files & caches (/var/folders)"), size: FS.size(of: temp),
+                    detail: L("系统和应用的临时文件，很多在重启时清掉。", "Temporary files from macOS and apps. Many are cleared on restart."), safe: L("重启是最安全的清理方式", "Restarting is the safest way to clear them"), action: .reveal(temp)))
         }
         let docker = FS.url("Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw")
         if FS.exists(docker) {
             items.append(
                 SystemDataItem(
-                    id: "docker", icon: "shippingbox.fill", title: "Docker 虚拟磁盘", size: FS.size(of: docker),
-                    detail: "所有镜像、容器、卷都在这一个文件里，删了项目它也不会自己变小。", safe: "在终端运行 docker system df 看明细，再用 docker system prune 清理",
+                    id: "docker", icon: "shippingbox.fill", title: L("Docker 虚拟磁盘", "Docker virtual disk"), size: FS.size(of: docker),
+                    detail: L("所有镜像、容器、卷都在这一个文件里，删了项目它也不会自己变小。", "All images, containers and volumes live in this one file. It doesn't shrink on its own when you delete projects."), safe: L("在终端运行 docker system df 看明细，再用 docker system prune 清理", "Run docker system df in Terminal for details, then docker system prune to clean up"),
                     action: .reveal(docker)))
         }
         let simulators = FS.url("Library/Developer/CoreSimulator/Devices")
         if FS.exists(simulators) {
             items.append(
                 SystemDataItem(
-                    id: "simulators", icon: "iphone.gen3", title: "iOS 模拟器", size: FS.size(of: simulators),
-                    detail: "Xcode 模拟器里装的应用和数据。", safe: "删除已经不可用的模拟器很安全",
-                    action: .shell(command: "/usr/bin/xcrun simctl delete unavailable", label: "删除不可用的模拟器")))
+                    id: "simulators", icon: "iphone.gen3", title: L("iOS 模拟器", "iOS Simulators"), size: FS.size(of: simulators),
+                    detail: L("Xcode 模拟器里装的应用和数据。", "Apps and data installed in Xcode simulators."), safe: L("删除已经不可用的模拟器很安全", "Deleting unavailable simulators is safe"),
+                    action: .shell(command: "/usr/bin/xcrun simctl delete unavailable", label: L("删除不可用的模拟器", "Delete Unavailable Simulators"))))
         }
         items.append(
             SystemDataItem(
-                id: "spotlight", icon: "magnifyingglass", title: "聚焦索引（Spotlight）", size: nil,
-                detail: "搜索用的索引，通常几个 GB，异常时能到上百 GB（有 V2EX 网友重建后释放了 100 多 GB）。普通权限测不到大小。",
-                safe: "太大时用“性能 → 重建 Spotlight 索引”",
-                action: .admin(command: "/usr/bin/du -sh /System/Volumes/Data/.Spotlight-V100", label: "测量大小（需要密码）")))
+                id: "spotlight", icon: "magnifyingglass", title: L("聚焦索引（Spotlight）", "Spotlight indexing"), size: nil,
+                detail: L("搜索用的索引，通常几个 GB，异常时能到上百 GB（有 V2EX 网友重建后释放了 100 多 GB）。普通权限测不到大小。", "The search index. Usually a few GB, but it can balloon past 100 GB when something goes wrong. Its size can't be measured without admin rights."),
+                safe: L("太大时用“性能 → 重建 Spotlight 索引”", "If it's too big, use Performance → Reindex Spotlight"),
+                action: .admin(command: "/usr/bin/du -sh /System/Volumes/Data/.Spotlight-V100", label: L("测量大小（需要密码）", "Measure (needs password)"))))
         return items
     }
 }
@@ -367,6 +369,7 @@ enum Regrowth {
     static func load() -> [CleanedEntry] { DetectiveStore.load([CleanedEntry].self, from: DetectiveStore.regrowthURL) ?? [] }
 
     static func record(_ items: [(path: String, size: Int64)]) {
+        guard !DebugFlags.readOnly else { return }
         guard !items.isEmpty else { return }
         var all = load()
         all += items.filter { $0.size >= 1_000_000 }.map { CleanedEntry(path: $0.path, size: $0.size, date: .now) }
@@ -406,9 +409,9 @@ enum Regrowth {
 
     static func hint(for entry: CleanedEntry) -> String? {
         guard let latest = entry.latest, let ratio = entry.ratio, ratio >= pointlessRatio else { return nil }
-        let days = latest.days == 1 ? "一天" : "一周"
-        let grew = ratio >= 1 ? "\(days)内就全部长回来了（现在 \(FS.format(latest.size))）" : "\(days)内又长回 \(FS.format(latest.size))（\(Int(ratio * 100))%）"
-        return "上次清掉 \(FS.format(entry.size))，\(grew)。清了腾不出空间，还会让应用重新生成缓存。"
+        let days = latest.days == 1 ? L("一天", "within a day") : L("一周", "within a week")
+        let grew = ratio >= 1 ? L("\(days)内就全部长回来了（现在 \(FS.format(latest.size))）", "it all grew back \(days) (now \(FS.format(latest.size)))") : L("\(days)内又长回 \(FS.format(latest.size))（\(Int(ratio * 100))%）", "\(FS.format(latest.size)) grew back \(days) (\(Int(ratio * 100))%)")
+        return L("上次清掉 \(FS.format(entry.size))，\(grew)。清了腾不出空间，还会让应用重新生成缓存。", "Last time \(FS.format(entry.size)) was cleaned and \(grew). Cleaning it frees no space and just makes apps rebuild the cache.")
     }
 }
 
@@ -422,6 +425,7 @@ enum BackgroundRecorder {
     static var isEnabled: Bool { FS.exists(plistURL) }
 
     static func setEnabled(_ enabled: Bool) {
+        guard !DebugFlags.readOnly else { return }
         let target = "gui/\(getuid())"
         Shell.run("/bin/launchctl", ["bootout", target, plistURL.path])
         if enabled {

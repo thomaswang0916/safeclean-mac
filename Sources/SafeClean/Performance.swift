@@ -21,6 +21,7 @@ enum Shell {
 
     /// 用 macOS 自己的管理员密码框执行命令；密码由系统处理，本应用拿不到。
     static func runAsAdmin(_ command: String, prompt: String) -> (ok: Bool, output: String) {
+        guard !DebugFlags.readOnly else { return (true, "") }
         func quote(_ s: String) -> String { "\"" + s.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") + "\"" }
         let script = "do shell script \(quote(command)) with prompt \(quote(prompt)) with administrator privileges"
         let r = run("/usr/bin/osascript", ["-e", script])
@@ -41,24 +42,24 @@ struct MaintenanceTask: Identifiable {
 
     static let all: [MaintenanceTask] = [
         MaintenanceTask(
-            id: "ram", title: "释放内存", detail: "把系统缓存在内存里、暂时用不到的数据清出去，给正在用的应用腾地方。",
+            id: "ram", title: L("释放内存", "Free Up RAM"), detail: L("把系统缓存在内存里、暂时用不到的数据清出去，给正在用的应用腾地方。", "Clears data macOS has cached in memory but isn't using, making room for the apps you're running."),
             icon: "memorychip", needsAdmin: true, command: "/usr/sbin/purge", selected: true),
         MaintenanceTask(
-            id: "dns", title: "刷新 DNS 缓存", detail: "网页打不开、域名解析到旧地址时有用。",
+            id: "dns", title: L("刷新 DNS 缓存", "Flush DNS Cache"), detail: L("网页打不开、域名解析到旧地址时有用。", "Helps when websites won't load or a domain still points to an old address."),
             icon: "network", needsAdmin: true, command: "/usr/bin/dscacheutil -flushcache; /usr/bin/killall -HUP mDNSResponder",
             selected: true),
         MaintenanceTask(
-            id: "quicklook", title: "重置快速查看缓存", detail: "空格预览显示旧内容或缩略图不对时有用。",
+            id: "quicklook", title: L("重置快速查看缓存", "Reset Quick Look Cache"), detail: L("空格预览显示旧内容或缩略图不对时有用。", "Helps when Quick Look shows outdated previews or wrong thumbnails."),
             icon: "eye", needsAdmin: false, command: "/usr/bin/qlmanage -r cache", selected: true),
         MaintenanceTask(
-            id: "launchservices", title: "重建“打开方式”菜单",
-            detail: "右键“打开方式”里出现重复或已删除的应用时用。重建需要一两分钟，期间图标可能短暂显示不正常。", icon: "list.bullet.rectangle",
+            id: "launchservices", title: L("重建“打开方式”菜单", "Rebuild the \"Open With\" Menu"),
+            detail: L("右键“打开方式”里出现重复或已删除的应用时用。重建需要一两分钟，期间图标可能短暂显示不正常。", "Use this when \"Open With\" lists duplicate or deleted apps. It takes a minute or two, and icons may look wrong briefly."), icon: "list.bullet.rectangle",
             needsAdmin: false,
             command:
                 "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -kill -r -domain local -domain system -domain user",
             selected: false),
         MaintenanceTask(
-            id: "spotlight", title: "重建 Spotlight 索引", detail: "搜索找不到文件时用。后台会重新索引整个磁盘，可能要几十分钟、风扇会转。",
+            id: "spotlight", title: L("重建 Spotlight 索引", "Reindex Spotlight"), detail: L("搜索找不到文件时用。后台会重新索引整个磁盘，可能要几十分钟、风扇会转。", "Use this when search can't find your files. The whole disk is reindexed in the background — this can take a while and spin up the fans."),
             icon: "magnifyingglass", needsAdmin: true, command: "/usr/bin/mdutil -E /", selected: false),
     ]
 }
@@ -125,7 +126,7 @@ enum SystemInfo {
             .compactMap { app -> HeavyApp? in
                 guard let u = usage[app.processIdentifier] else { return nil }
                 return HeavyApp(
-                    pid: app.processIdentifier, name: app.localizedName ?? "未知应用", url: app.bundleURL, memory: u.memory, cpu: u.cpu)
+                    pid: app.processIdentifier, name: app.localizedName ?? L("未知应用", "Unknown app"), url: app.bundleURL, memory: u.memory, cpu: u.cpu)
             }
             .sorted { $0.memory > $1.memory }
     }
@@ -219,8 +220,9 @@ final class PerformanceModel: ObservableObject {
             let admin = chosen.filter(\.needsAdmin)
             if !admin.isEmpty {
                 let command = admin.map(\.command).joined(separator: "; ")
+                let titles = admin.map(\.title).joined(separator: L("、", ", "))
                 let r = await Task.detached {
-                    Shell.runAsAdmin(command, prompt: "放心清理 要运行维护任务：\(admin.map(\.title).joined(separator: "、"))")
+                    Shell.runAsAdmin(command, prompt: L("放心清理 要运行维护任务：\(titles)", "SafeClean wants to run maintenance tasks: \(titles)"))
                 }.value
                 log += admin.map { ($0.title, r.ok) }
             }
@@ -237,7 +239,7 @@ final class PerformanceModel: ObservableObject {
     }
 
     func setEnabled(_ item: BackgroundItem, _ enabled: Bool) {
-        guard item.editable else { return }
+        guard item.editable, !DebugFlags.readOnly else { return }
         let target = "gui/\(getuid())"
         Task {
             await Task.detached {
@@ -254,6 +256,7 @@ final class PerformanceModel: ObservableObject {
     }
 
     func quit(_ app: HeavyApp) {
+        guard !DebugFlags.readOnly else { return }
         NSRunningApplication(processIdentifier: app.pid)?.terminate()
         Task {
             try? await Task.sleep(for: .seconds(1.5))
@@ -278,7 +281,7 @@ struct PerformanceView: View {
         case .scanning:
             VStack(spacing: 0) {
                 StageTopBar(title: module.title)
-                ScanningStage(module: module, title: "正在分析…", detail: "查看后台项、内存和正在运行的应用", stop: nil)
+                ScanningStage(module: module, title: L("正在分析…", "Analyzing…"), detail: L("查看后台项、内存和正在运行的应用", "Checking background items, memory and running apps"), stop: nil)
             }
         case .overview:
             overview
@@ -291,19 +294,19 @@ struct PerformanceView: View {
         case .running:
             VStack(spacing: 0) {
                 StageTopBar(title: module.title)
-                ScanningStage(module: module, title: "正在运行维护任务…", detail: "需要管理员权限的任务会弹出系统密码框", stop: nil)
+                ScanningStage(module: module, title: L("正在运行维护任务…", "Running maintenance tasks…"), detail: L("需要管理员权限的任务会弹出系统密码框", "Tasks that need admin rights will show the macOS password prompt"), stop: nil)
             }
         case .done:
             VStack(spacing: 0) {
                 StageTopBar(title: module.title)
                 ResultStage(
-                    module: module, symbol: "checkmark.seal.fill", headline: "维护完成",
-                    subline: "内存已用 \(FS.format(model.memoryUsed)) / \(FS.format(model.memoryTotal))",
-                    primaryTitle: "完成", primaryAction: { model.screen = .overview }
+                    module: module, symbol: "checkmark.seal.fill", headline: L("维护完成", "Maintenance Complete"),
+                    subline: L("内存已用 \(FS.format(model.memoryUsed)) / \(FS.format(model.memoryTotal))", "Memory used: \(FS.format(model.memoryUsed)) / \(FS.format(model.memoryTotal))"),
+                    primaryTitle: L("完成", "Done"), primaryAction: { model.screen = .overview }
                 ) {
                     VStack(alignment: .leading, spacing: 8) {
                         ForEach(model.runLog, id: \.0) { title, ok in
-                            if ok { DoneChip(text: title) } else { DoneChip(text: "\(title)：没有完成（可能取消了密码框）", color: Color(hex: 0xFFC46B)) }
+                            if ok { DoneChip(text: title) } else { DoneChip(text: L("\(title)：没有完成（可能取消了密码框）", "\(title): not completed (the password prompt may have been cancelled)"), color: Color(hex: 0xFFC46B)) }
                         }
                     }
                 }
@@ -313,30 +316,30 @@ struct PerformanceView: View {
 
     private var overview: some View {
         VStack(spacing: 0) {
-            StageTopBar(leadingTitle: "重新开始", leadingAction: { model.screen = .intro }, title: module.title)
+            StageTopBar(leadingTitle: L("重新开始", "Start Over"), leadingAction: { model.screen = .intro }, title: module.title)
             StageLayout(module: module, symbol: module.heroSymbol) {
                 VStack(alignment: .leading, spacing: 14) {
-                    Text("\(model.recommendationCount) 项建议").font(.system(size: 40, weight: .bold))
-                    Text("内存已用 \(FS.format(model.memoryUsed)) / \(FS.format(model.memoryTotal))")
+                    Text(L("\(model.recommendationCount) 项建议", "\(model.recommendationCount) Recommendations")).font(.system(size: 40, weight: .bold))
+                    Text(L("内存已用 \(FS.format(model.memoryUsed)) / \(FS.format(model.memoryTotal))", "Memory used: \(FS.format(model.memoryUsed)) / \(FS.format(model.memoryTotal))"))
                         .font(.system(size: 16))
                         .foregroundStyle(.white.opacity(0.78))
                         .monospacedDigit()
                     ActionTile(
-                        icon: "wrench.and.screwdriver.fill", title: "维护任务",
-                        value: "已选 \(model.tasks.filter(\.selected).count) 项，可随时运行", accent: module.accent
+                        icon: "wrench.and.screwdriver.fill", title: L("维护任务", "Maintenance Tasks"),
+                        value: L("已选 \(model.tasks.filter(\.selected).count) 项，可随时运行", "\(model.tasks.filter(\.selected).count) selected, ready to run"), accent: module.accent
                     ) { model.screen = .maintenance }
                     ActionTile(
-                        icon: "switch.2", title: "后台启动项",
-                        value: "\(model.items.count) 个第三方，\(model.activeBackgroundCount) 个在启用", accent: module.accent
+                        icon: "switch.2", title: L("后台启动项", "Background Items"),
+                        value: L("\(model.items.count) 个第三方，\(model.activeBackgroundCount) 个在启用", "\(model.items.count) third-party, \(model.activeBackgroundCount) enabled"), accent: module.accent
                     ) { model.screen = .background }
                     ActionTile(
-                        icon: "gauge.with.dots.needle.67percent", title: "高耗能应用",
-                        value: model.heavyCount > 0 ? "\(model.heavyCount) 个占用超过 1 GB 内存" : "没有特别占内存的应用",
+                        icon: "gauge.with.dots.needle.67percent", title: L("高耗能应用", "Heavy Consumers"),
+                        value: model.heavyCount > 0 ? L("\(model.heavyCount) 个占用超过 1 GB 内存", "\(model.heavyCount) using over 1 GB of memory") : L("没有特别占内存的应用", "No app is using an unusual amount of memory"),
                         accent: module.accent, highlight: model.heavyCount > 0
                     ) { model.screen = .heavy }
                 }
             } bottom: {
-                OrbButton(title: "运行", accent: module.accent, disabled: !model.tasks.contains(where: \.selected)) {
+                OrbButton(title: L("运行", "Run"), accent: module.accent, disabled: !model.tasks.contains(where: \.selected)) {
                     model.runSelectedTasks()
                 }
             }
@@ -344,7 +347,7 @@ struct PerformanceView: View {
     }
 
     private var maintenance: some View {
-        DetailFrame(title: "维护任务", back: { model.screen = .overview }) {
+        DetailFrame(title: L("维护任务", "Maintenance Tasks"), back: { model.screen = .overview }) {
             List {
                 ForEach($model.tasks) { $task in
                     HStack(spacing: 12) {
@@ -357,7 +360,7 @@ struct PerformanceView: View {
                             HStack(spacing: 6) {
                                 Text(task.title).font(.system(size: 15, weight: .semibold))
                                 if task.needsAdmin {
-                                    Text("需要密码")
+                                    Text(L("需要密码", "Password"))
                                         .font(.system(size: 10, weight: .semibold))
                                         .padding(.horizontal, 6)
                                         .padding(.vertical, 1)
@@ -374,21 +377,21 @@ struct PerformanceView: View {
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
         } footer: {
-            Text("需要密码的任务会弹出 macOS 自己的密码框，本应用拿不到你的密码。")
+            Text(L("需要密码的任务会弹出 macOS 自己的密码框，本应用拿不到你的密码。", "Tasks marked Password use the macOS password prompt — SafeClean never sees your password."))
                 .font(.system(size: 12))
                 .foregroundStyle(.white.opacity(0.65))
             Spacer()
-            ActionCapsule(title: "运行所选", accent: module.accent, disabled: !model.tasks.contains(where: \.selected)) {
+            ActionCapsule(title: L("运行所选", "Run Selected"), accent: module.accent, disabled: !model.tasks.contains(where: \.selected)) {
                 model.runSelectedTasks()
             }
         }
     }
 
     private var background: some View {
-        DetailFrame(title: "后台启动项", back: { model.screen = .overview }) {
+        DetailFrame(title: L("后台启动项", "Background Items"), back: { model.screen = .overview }) {
             List {
                 if model.items.isEmpty {
-                    Text("没有第三方后台启动项").foregroundStyle(.secondary).listRowBackground(Color.clear)
+                    Text(L("没有第三方后台启动项", "No third-party background items")).foregroundStyle(.secondary).listRowBackground(Color.clear)
                 }
                 ForEach(model.items) { item in
                     HStack(spacing: 12) {
@@ -414,11 +417,11 @@ struct PerformanceView: View {
                             Toggle("", isOn: Binding(get: { !item.disabled }, set: { model.setEnabled(item, $0) }))
                                 .toggleStyle(.switch)
                                 .labelsHidden()
-                                .help(item.disabled ? "已停用，打开后重新启用" : "关闭后停止运行，登录时也不会再启动")
+                                .help(item.disabled ? L("已停用，打开后重新启用", "Disabled. Turn on to re-enable.") : L("关闭后停止运行，登录时也不会再启动", "Turning it off stops it now and at future logins"))
                         } else {
                             Button { FS.reveal([item.plist]) } label: { Image(systemName: "magnifyingglass") }
                                 .buttonStyle(.borderless)
-                                .help("系统级项目，改动需要管理员权限，可以在 Finder 里查看")
+                                .help(L("系统级项目，改动需要管理员权限，可以在 Finder 里查看", "System-wide item. Changing it needs admin rights; you can view it in Finder."))
                         }
                     }
                     .padding(.vertical, 3)
@@ -428,11 +431,11 @@ struct PerformanceView: View {
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
         } footer: {
-            Text("只有你自己的启动代理可以在这里开关；系统级的需要管理员权限。")
+            Text(L("只有你自己的启动代理可以在这里开关；系统级的需要管理员权限。", "Only your own launch agents can be toggled here; system-wide ones need admin rights."))
                 .font(.system(size: 12))
                 .foregroundStyle(.white.opacity(0.65))
             Spacer()
-            PillButton(title: "打开登录项设置", icon: "gearshape") {
+            PillButton(title: L("打开登录项设置", "Open Login Items Settings"), icon: "gearshape") {
                 NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension")!)
             }
         }
@@ -440,14 +443,14 @@ struct PerformanceView: View {
 
     private func scopeText(_ item: BackgroundItem) -> String {
         switch item.scope {
-        case .user: item.disabled ? "已停用" : (item.loaded ? "运行中" : "已启用")
-        case .systemAgent: "系统级"
-        case .systemDaemon: "系统服务"
+        case .user: item.disabled ? L("已停用", "Disabled") : (item.loaded ? L("运行中", "Running") : L("已启用", "Enabled"))
+        case .systemAgent: L("系统级", "System")
+        case .systemDaemon: L("系统服务", "System service")
         }
     }
 
     private var heavyApps: some View {
-        DetailFrame(title: "高耗能应用", back: { model.screen = .overview }) {
+        DetailFrame(title: L("高耗能应用", "Heavy Consumers"), back: { model.screen = .overview }) {
             List(model.heavy) { app in
                 HStack(spacing: 12) {
                     if let url = app.url {
@@ -455,7 +458,7 @@ struct PerformanceView: View {
                     }
                     Text(app.name).font(.system(size: 14, weight: .semibold))
                     if app.memory >= PerformanceModel.heavyThreshold {
-                        Text("占用较多")
+                        Text(L("占用较多", "Heavy"))
                             .font(.system(size: 10, weight: .semibold))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 1)
@@ -464,7 +467,7 @@ struct PerformanceView: View {
                     Spacer()
                     Text("CPU \(app.cpu, specifier: "%.0f")%").font(.system(size: 12)).foregroundStyle(.white.opacity(0.65)).monospacedDigit()
                     Text(FS.format(app.memory)).monospacedDigit().frame(width: 90, alignment: .trailing)
-                    PillButton(title: "退出") { model.quit(app) }
+                    PillButton(title: L("退出", "Quit")) { model.quit(app) }
                 }
                 .padding(.vertical, 3)
                 .listRowBackground(Color.clear)
@@ -472,11 +475,11 @@ struct PerformanceView: View {
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
         } footer: {
-            Text("内存已用 \(FS.format(model.memoryUsed)) / \(FS.format(model.memoryTotal))。退出前记得保存正在编辑的内容。")
+            Text(L("内存已用 \(FS.format(model.memoryUsed)) / \(FS.format(model.memoryTotal))。退出前记得保存正在编辑的内容。", "Memory used: \(FS.format(model.memoryUsed)) / \(FS.format(model.memoryTotal)). Save your work before quitting an app."))
                 .font(.system(size: 12))
                 .foregroundStyle(.white.opacity(0.7))
             Spacer()
-            PillButton(title: "刷新", icon: "arrow.clockwise") { model.refreshHeavy() }
+            PillButton(title: L("刷新", "Refresh"), icon: "arrow.clockwise") { model.refreshHeavy() }
         }
     }
 }

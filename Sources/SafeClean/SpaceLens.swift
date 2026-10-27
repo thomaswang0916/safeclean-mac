@@ -162,8 +162,8 @@ final class SpaceLensModel: ObservableObject {
 
     var rootName: String {
         switch root.path {
-        case "/": "Macintosh HD（整个磁盘）"
-        case FS.home.path: "主目录（\(FS.home.lastPathComponent)）"
+        case "/": L("Macintosh HD（整个磁盘）", "Macintosh HD (entire disk)")
+        case FS.home.path: L("主目录（\(FS.home.lastPathComponent)）", "Home (\(FS.home.lastPathComponent))")
         default: root.lastPathComponent
         }
     }
@@ -175,7 +175,7 @@ final class SpaceLensModel: ObservableObject {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.directoryURL = root
-        panel.prompt = "选择"
+        panel.prompt = L("选择", "Choose")
         if panel.runModal() == .OK, let url = panel.url { root = url }
     }
 
@@ -183,14 +183,14 @@ final class SpaceLensModel: ObservableObject {
         let flag = CancelFlag()
         self.flag = flag
         screen = .scanning
-        status = "准备中"
+        status = L("准备中", "Getting ready")
         selection = []
         let root = root
         let includeHidden = includeHidden
         Task {
             let tree = await Task.detached(priority: .userInitiated) { [weak self] in
                 SpaceScanner.scan(root: root, includeHidden: includeHidden, cancel: flag) { count, folder in
-                    Task { @MainActor in self?.status = "已查看 \(count) 项  \(folder)" }
+                    Task { @MainActor in self?.status = L("已查看 \(count) 项  \(folder)", "Checked \(plural(count, "item", "items"))  \(folder)") }
                 }
             }.value
             guard !flag.isCancelled else { return }
@@ -241,7 +241,7 @@ final class SpaceLensModel: ObservableObject {
             let failed = Set(r.failures.map(\.path))
             for node in nodes where !failed.contains(node.url.path) { node.parent?.remove(node) }
             selection = []
-            message = r.failures.isEmpty ? r.summary : "\(r.summary)；\(r.failures.count) 项没能移走"
+            message = r.failures.isEmpty ? r.summary : L("\(r.summary)；\(r.failures.count) 项没能移走", "\(r.summary); \(plural(r.failures.count, "item", "items")) couldn't be moved")
             revision += 1
             screen = .map
         }
@@ -265,11 +265,11 @@ struct SpaceLensView: View {
                     ModuleIntro(module: module, action: { model.scan() }) {
                         VStack(alignment: .leading, spacing: 10) {
                             Menu {
-                                Button("主目录") { model.choose(FS.home) }
-                                Button("Macintosh HD（整个磁盘，较慢）") { model.choose(URL(fileURLWithPath: "/")) }
-                                Button("应用程序") { model.choose(URL(fileURLWithPath: "/Applications")) }
+                                Button(L("主目录", "Home")) { model.choose(FS.home) }
+                                Button(L("Macintosh HD（整个磁盘，较慢）", "Macintosh HD (entire disk, slower)")) { model.choose(URL(fileURLWithPath: "/")) }
+                                Button(L("应用程序", "Applications")) { model.choose(URL(fileURLWithPath: "/Applications")) }
                                 Divider()
-                                Button("选择文件夹…") { model.chooseFolder() }
+                                Button(L("选择文件夹…", "Choose Folder…")) { model.chooseFolder() }
                             } label: {
                                 HStack(spacing: 8) {
                                     Image(systemName: model.root.path == "/" ? "internaldrive.fill" : "folder.fill")
@@ -285,7 +285,7 @@ struct SpaceLensView: View {
                             .menuStyle(.borderlessButton)
                             .menuIndicator(.hidden)
                             .fixedSize()
-                            Toggle("包括隐藏的文件", isOn: $model.includeHidden).toggleStyle(.checkbox)
+                            Toggle(L("包括隐藏的文件", "Include hidden files"), isOn: $model.includeHidden).toggleStyle(.checkbox)
                         }
                         .padding(.top, 8)
                     }
@@ -293,25 +293,25 @@ struct SpaceLensView: View {
             case .scanning:
                 VStack(spacing: 0) {
                     StageTopBar(title: module.title)
-                    ScanningStage(module: module, title: "正在测量空间…", detail: model.status) { model.stop() }
+                    ScanningStage(module: module, title: L("正在测量空间…", "Measuring space…"), detail: model.status) { model.stop() }
                 }
             case .map, .trashing:
                 map
             }
         }
-        .alert("移到废纸篓？", isPresented: $confirming) {
-            Button("移到废纸篓", role: .destructive) { model.trashSelected() }
-            Button("取消", role: .cancel) {}
+        .alert(L("移到废纸篓？", "Move to Trash?"), isPresented: $confirming) {
+            Button(L("移到废纸篓", "Move to Trash"), role: .destructive) { model.trashSelected() }
+            Button(L("取消", "Cancel"), role: .cancel) {}
         } message: {
             let nodes = model.selectedNodes
-            Text("\(nodes.count) 项（\(FS.format(nodes.reduce(0) { $0 + $1.size }))）会被移到废纸篓，需要时可以放回。")
+            Text(L("\(nodes.count) 项（\(FS.format(nodes.reduce(0) { $0 + $1.size }))）会被移到废纸篓，需要时可以放回。", "\(plural(nodes.count, "item", "items")) (\(FS.format(nodes.reduce(0) { $0 + $1.size }))) will be moved to the Trash. You can put them back if needed."))
         }
         .onChange(of: model.revision) { _, _ in disk.refresh() }
     }
 
     private var map: some View {
         VStack(spacing: 10) {
-            StageTopBar(leadingTitle: "重新开始", leadingAction: { model.screen = .intro }, title: module.title)
+            StageTopBar(leadingTitle: L("重新开始", "Start Over"), leadingAction: { model.screen = .intro }, title: module.title)
             if let current = model.current {
                 HStack(spacing: 16) {
                     VStack(alignment: .leading, spacing: 10) {
@@ -385,8 +385,8 @@ struct TreemapView: View {
                     .offset(x: tile.rect.minX + 2, y: tile.rect.minY + 2)
                     .contextMenu {
                         if let n = tile.node {
-                            Button(model.selection.contains(n.url) ? "取消勾选" : "勾选") { model.toggle(n) }
-                            Button("在 Finder 中显示") { FS.reveal([n.url]) }
+                            Button(model.selection.contains(n.url) ? L("取消勾选", "Deselect") : L("勾选", "Select")) { model.toggle(n) }
+                            Button(L("在 Finder 中显示", "Show in Finder")) { FS.reveal([n.url]) }
                         }
                     }
                 }
@@ -400,8 +400,8 @@ struct TreemapView: View {
         let shown = Array(node.children.prefix(60))
         let rest = node.children.dropFirst(60).reduce(0) { $0 + $1.size }
         var entries: [(String, SpaceNode?, String, Int64)] = shown.map { ($0.url.path, $0, $0.name, $0.size) }
-        if node.looseSize > 0 { entries.append(("#loose", nil, "\(node.looseCount) 个小文件", node.looseSize)) }
-        if rest > 0 { entries.append(("#rest", nil, "其余 \(node.children.count - 60) 项", rest)) }
+        if node.looseSize > 0 { entries.append(("#loose", nil, L("\(node.looseCount) 个小文件", "\(plural(node.looseCount, "small file", "small files"))"), node.looseSize)) }
+        if rest > 0 { entries.append(("#rest", nil, L("其余 \(node.children.count - 60) 项", "\(plural(node.children.count - 60, "more item", "more items"))"), rest)) }
         entries.sort { $0.3 > $1.3 }
         let rects = Treemap.layout(entries.map { Double(max($0.3, 1)) }, in: rect)
         return zip(entries, rects).map { Tile(id: $0.0, node: $0.1, title: $0.2, size: $0.3, rect: $1) }
@@ -496,11 +496,11 @@ struct SpaceSidebar: View {
                 }
                 let selected = model.selectedNodes
                 HStack {
-                    Text("已选 \(selected.count) 项 · \(FS.format(selected.reduce(0) { $0 + $1.size }))")
+                    Text(L("已选 \(selected.count) 项 · \(FS.format(selected.reduce(0) { $0 + $1.size }))", "\(selected.count) selected · \(FS.format(selected.reduce(0) { $0 + $1.size }))"))
                         .font(.system(size: 13))
                         .monospacedDigit()
                     Spacer()
-                    ActionCapsule(title: "移到废纸篓", accent: accent, disabled: selected.isEmpty, action: confirm)
+                    ActionCapsule(title: L("移到废纸篓", "Move to Trash"), accent: accent, disabled: selected.isEmpty, action: confirm)
                 }
             }
             .padding(14)

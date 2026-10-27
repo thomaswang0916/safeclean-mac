@@ -127,7 +127,7 @@ enum AppScanner {
                 var item = JunkItem(url: url, name: FS.abbreviate(url.path), size: FS.size(of: url), selected: true)
                 if shared.contains(url.path) {
                     item.selected = false
-                    item.note = "共享"
+                    item.note = L("共享", "Shared")
                 }
                 return item
             }
@@ -199,6 +199,7 @@ final class AppsModel: ObservableObject {
     }
 
     func quit(_ app: AppInfo) {
+        guard !DebugFlags.readOnly else { return }
         NSRunningApplication.runningApplications(withBundleIdentifier: app.bundleID).forEach { $0.terminate() }
         Task {
             for _ in 0..<10 where isRunning(app) {
@@ -210,23 +211,24 @@ final class AppsModel: ObservableObject {
 
     /// 应用本体交给 Finder 移到废纸篓（需要时会弹出管理员密码框），残留文件直接移到废纸篓。
     func uninstall(_ app: AppInfo) {
+        guard !DebugFlags.readOnly else { return }
         guard !isRunning(app) else {
-            message = "请先退出 \(app.name) 再卸载。"
+            message = L("请先退出 \(app.name) 再卸载。", "Quit \(app.name) before uninstalling it.")
             return
         }
         let targets = leftovers.filter(\.selected).map { Cleaner.Target(url: $0.url, size: $0.size, permanent: false) }
         NSWorkspace.shared.recycle([app.url]) { _, error in
             Task { @MainActor in
                 if let error {
-                    self.message = "没能移除 \(app.name)：\(error.localizedDescription)"
+                    self.message = L("没能移除 \(app.name)：\(error.localizedDescription)", "Couldn't remove \(app.name): \(error.localizedDescription)")
                     return
                 }
                 let r = await Task.detached(priority: .userInitiated) { Cleaner.perform(targets) }.value
                 StatsStore.shared.record(.apps, bytes: (app.size ?? 0) + r.trashedBytes, items: 1 + r.trashedCount)
                 self.apps.removeAll { $0.id == app.id }
                 self.selectedID = nil
-                var text = "已将 \(app.name) 和 \(r.trashedCount) 项残留文件移到废纸篓（共 \(FS.format((app.size ?? 0) + r.trashedBytes))）。"
-                if !r.failures.isEmpty { text += " \(r.failures.count) 项残留没能移除。" }
+                var text = L("已将 \(app.name) 和 \(r.trashedCount) 项残留文件移到废纸篓（共 \(FS.format((app.size ?? 0) + r.trashedBytes))）。", "Moved \(app.name) and \(plural(r.trashedCount, "leftover file", "leftover files")) to the Trash (\(FS.format((app.size ?? 0) + r.trashedBytes)) in total).")
+                if !r.failures.isEmpty { text += L(" \(r.failures.count) 项残留没能移除。", " \(plural(r.failures.count, "leftover", "leftovers")) couldn't be removed.") }
                 self.message = text
             }
         }
@@ -253,8 +255,8 @@ struct ApplicationsView: View {
                 VStack(spacing: 0) {
                     StageTopBar(title: module.title)
                     ScanningStage(
-                        module: module, title: "正在检查应用…",
-                        detail: updates.checking ? "检查更新：\(updates.checked) / \(updates.checkable)" : "读取已安装的应用",
+                        module: module, title: L("正在检查应用…", "Checking apps…"),
+                        detail: updates.checking ? L("检查更新：\(updates.checked) / \(updates.checkable)", "Checking for updates: \(updates.checked) / \(updates.checkable)") : L("读取已安装的应用", "Reading installed apps"),
                         progress: updates.checkable > 0 ? Double(updates.checked) / Double(updates.checkable) : nil, stop: nil)
                 }
             case .overview:
@@ -279,20 +281,20 @@ struct ApplicationsView: View {
 
     private var overview: some View {
         VStack(spacing: 0) {
-            StageTopBar(leadingTitle: "重新开始", leadingAction: { apps.screen = .intro }, title: module.title)
+            StageTopBar(leadingTitle: L("重新开始", "Start Over"), leadingAction: { apps.screen = .intro }, title: module.title)
             StageLayout(module: module, symbol: module.heroSymbol) {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("\(apps.apps.count) 个应用").font(.system(size: 40, weight: .bold))
-                    Text(updates.updates.isEmpty ? "检查过的应用都是最新版本。" : "\(updates.updates.count) 个应用有新版本可以装。")
+                    Text(L("\(apps.apps.count) 个应用", "\(plural(apps.apps.count, "app", "apps"))")).font(.system(size: 40, weight: .bold))
+                    Text(updates.updates.isEmpty ? L("检查过的应用都是最新版本。", "Every app we could check is up to date.") : L("\(updates.updates.count) 个应用有新版本可以装。", "\(plural(updates.updates.count, "app", "apps")) have updates available."))
                         .font(.system(size: 16))
                         .foregroundStyle(.white.opacity(0.78))
                     ActionTile(
-                        icon: "xmark.bin.fill", title: "卸载程序",
-                        value: "\(apps.apps.count) 个应用 · \(FS.format(apps.totalSize))", accent: module.accent
+                        icon: "xmark.bin.fill", title: L("卸载程序", "Uninstaller"),
+                        value: L("\(apps.apps.count) 个应用 · \(FS.format(apps.totalSize))", "\(plural(apps.apps.count, "app", "apps")) · \(FS.format(apps.totalSize))"), accent: module.accent
                     ) { apps.screen = .uninstaller }
                     ActionTile(
-                        icon: "arrow.down.app.fill", title: "更新程序",
-                        value: updates.updates.isEmpty ? "检查了 \(updates.checkable) 个，没有可用更新" : "\(updates.updates.count) 个可更新",
+                        icon: "arrow.down.app.fill", title: L("更新程序", "Updater"),
+                        value: updates.updates.isEmpty ? L("检查了 \(updates.checkable) 个，没有可用更新", "Checked \(updates.checkable), no updates available") : L("\(updates.updates.count) 个可更新", "\(plural(updates.updates.count, "update", "updates")) available"),
                         accent: module.accent, highlight: !updates.updates.isEmpty
                     ) { apps.screen = .updater }
                 }
@@ -364,14 +366,14 @@ struct UninstallerPanel: View {
     private let accent = Module.applications.accent
 
     var body: some View {
-        DetailFrame(title: "卸载程序", back: back) {
+        DetailFrame(title: L("卸载程序", "Uninstaller"), back: back) {
             HStack(spacing: 0) {
                 VStack(spacing: 8) {
                     HStack(spacing: 8) {
-                        SearchField(placeholder: "搜索应用", text: $model.search)
-                        Picker("排序", selection: $model.sortBySize) {
-                            Text("名称").tag(false)
-                            Text("大小").tag(true)
+                        SearchField(placeholder: L("搜索应用", "Search apps"), text: $model.search)
+                        Picker(L("排序", "Sort"), selection: $model.sortBySize) {
+                            Text(L("名称", "Name")).tag(false)
+                            Text(L("大小", "Size")).tag(true)
                         }
                         .pickerStyle(.segmented)
                         .labelsHidden()
@@ -391,8 +393,8 @@ struct UninstallerPanel: View {
                 } else {
                     VStack(spacing: 10) {
                         Image(systemName: "hand.point.left.fill").font(.system(size: 34)).foregroundStyle(.white.opacity(0.5))
-                        Text("从左边选一个应用").font(.system(size: 16, weight: .semibold))
-                        Text("卸载时会把应用和它留在资源库里的文件一起移到废纸篓。")
+                        Text(L("从左边选一个应用", "Pick an app on the left")).font(.system(size: 16, weight: .semibold))
+                        Text(L("卸载时会把应用和它留在资源库里的文件一起移到废纸篓。", "Uninstalling moves the app and the files it left in your Library to the Trash."))
                             .font(.system(size: 13))
                             .foregroundStyle(.white.opacity(0.65))
                     }
@@ -403,27 +405,27 @@ struct UninstallerPanel: View {
             if let message = model.message {
                 Label(message, systemImage: "info.circle").font(.system(size: 13)).lineLimit(2)
             } else if let app = model.selectedApp {
-                Text("\(app.name)：共 \(FS.format(uninstallSize(app)))").foregroundStyle(.white.opacity(0.75)).monospacedDigit()
+                Text(L("\(app.name)：共 \(FS.format(uninstallSize(app)))", "\(app.name): \(FS.format(uninstallSize(app))) in total")).foregroundStyle(.white.opacity(0.75)).monospacedDigit()
             }
             Spacer()
             if let app = model.selectedApp {
                 if model.isRunning(app) {
-                    Label("正在运行", systemImage: "exclamationmark.triangle.fill").foregroundStyle(Color(hex: 0xFFC46B))
-                    PillButton(title: "退出应用") { model.quit(app) }
+                    Label(L("正在运行", "Running"), systemImage: "exclamationmark.triangle.fill").foregroundStyle(Color(hex: 0xFFC46B))
+                    PillButton(title: L("退出应用", "Quit App")) { model.quit(app) }
                 }
-                ActionCapsule(title: "卸载", accent: Color(hex: 0xFF5D6C), disabled: model.isRunning(app) || model.loadingLeftovers) {
+                ActionCapsule(title: L("卸载", "Uninstall"), accent: Color(hex: 0xFF5D6C), disabled: model.isRunning(app) || model.loadingLeftovers) {
                     confirming = true
                 }
             }
         }
         .onChange(of: model.selectedID) { _, _ in model.loadLeftovers() }
         .onAppear { if model.selectedApp != nil && model.leftovers.isEmpty { model.loadLeftovers() } }
-        .alert("卸载 \(model.selectedApp?.name ?? "")？", isPresented: $confirming) {
-            Button("卸载", role: .destructive) { if let app = model.selectedApp { model.uninstall(app) } }
-            Button("取消", role: .cancel) {}
+        .alert(L("卸载 \(model.selectedApp?.name ?? "这个应用")？", "Uninstall \(model.selectedApp?.name ?? "this app")?"), isPresented: $confirming) {
+            Button(L("卸载", "Uninstall"), role: .destructive) { if let app = model.selectedApp { model.uninstall(app) } }
+            Button(L("取消", "Cancel"), role: .cancel) {}
         } message: {
             if let app = model.selectedApp {
-                Text("应用和 \(model.leftovers.filter(\.selected).count) 项残留文件（共 \(FS.format(uninstallSize(app)))）会被移到废纸篓，需要时可以恢复。")
+                Text(L("应用和 \(model.leftovers.filter(\.selected).count) 项残留文件（共 \(FS.format(uninstallSize(app)))）会被移到废纸篓，需要时可以恢复。", "The app and \(plural(model.leftovers.filter(\.selected).count, "leftover file", "leftover files")) (\(FS.format(uninstallSize(app))) in total) will be moved to the Trash. You can put them back if needed."))
             }
         }
     }
@@ -467,7 +469,7 @@ struct AppDetail: View {
                     .frame(width: 60, height: 60)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(app.name).font(.system(size: 24, weight: .bold))
-                    Text("\(app.bundleID)  ·  版本 \(app.version)")
+                    Text(L("\(app.bundleID)  ·  版本 \(app.version)", "\(app.bundleID)  ·  Version \(app.version)"))
                         .font(.system(size: 13))
                         .foregroundStyle(.white.opacity(0.65))
                         .textSelection(.enabled)
@@ -476,12 +478,12 @@ struct AppDetail: View {
             }
             .padding(18)
             List {
-                ListHeader("应用本体")
+                ListHeader(L("应用本体", "App Bundle"))
                 HStack {
                     Image(systemName: "app.dashed").frame(width: 18)
                     Text(FS.abbreviate(app.url.path)).lineLimit(1).truncationMode(.middle)
                     Spacer()
-                    Text(app.size.map(FS.format) ?? "计算中…").monospacedDigit().foregroundStyle(.secondary)
+                    Text(app.size.map(FS.format) ?? L("计算中…", "Calculating…")).monospacedDigit().foregroundStyle(.secondary)
                     Button {
                         FS.reveal([app.url])
                     } label: {
@@ -490,11 +492,11 @@ struct AppDetail: View {
                     .buttonStyle(.borderless)
                 }
                 .listRowBackground(Color.clear)
-                ListHeader("残留文件")
+                ListHeader(L("残留文件", "Leftover Files"))
                 if model.loadingLeftovers {
                     ProgressView().controlSize(.small).listRowBackground(Color.clear)
                 } else if model.leftovers.isEmpty {
-                    Text("资源库里没有找到这个应用的残留文件").foregroundStyle(.secondary).listRowBackground(Color.clear)
+                    Text(L("资源库里没有找到这个应用的残留文件", "No leftover files found in your Library")).foregroundStyle(.secondary).listRowBackground(Color.clear)
                 }
                 ForEach($model.leftovers) { $item in
                     ItemRow(item: $item).listRowBackground(Color.clear)
@@ -512,18 +514,18 @@ struct UpdaterPanel: View {
     let back: () -> Void
 
     var body: some View {
-        DetailFrame(title: "更新程序", back: back) {
+        DetailFrame(title: L("更新程序", "Updater"), back: back) {
             if updates.checking {
                 VStack(spacing: 10) {
                     ProgressView()
-                    Text("检查中：\(updates.checked) / \(updates.checkable)").monospacedDigit()
+                    Text(L("检查中：\(updates.checked) / \(updates.checkable)", "Checking: \(updates.checked) / \(updates.checkable)")).monospacedDigit()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if updates.updates.isEmpty {
                 VStack(spacing: 10) {
                     Image(systemName: "checkmark.seal.fill").font(.system(size: 40)).foregroundStyle(Color(hex: 0x4ADE80))
-                    Text("都是最新版本").font(.system(size: 18, weight: .semibold))
-                    Text("检查了 \(updates.checkable) 个用 Sparkle 自动更新或来自 App Store 的应用。其他应用请用它们自带的更新方式。")
+                    Text(L("都是最新版本", "Everything is up to date")).font(.system(size: 18, weight: .semibold))
+                    Text(L("检查了 \(updates.checkable) 个用 Sparkle 自动更新或来自 App Store 的应用。其他应用请用它们自带的更新方式。", "Checked \(plural(updates.checkable, "app", "apps")) that update via Sparkle or the App Store. Update other apps through their own updaters."))
                         .font(.system(size: 13))
                         .foregroundStyle(.white.opacity(0.65))
                         .multilineTextAlignment(.center)
@@ -538,21 +540,21 @@ struct UpdaterPanel: View {
                             .frame(width: 34, height: 34)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(update.app.name).font(.system(size: 15, weight: .semibold))
-                            Text("当前 \(update.installed)  →  新版 \(update.latest)")
+                            Text(L("当前 \(update.installed)  →  新版 \(update.latest)", "Installed \(update.installed)  →  Latest \(update.latest)"))
                                 .font(.system(size: 12))
                                 .foregroundStyle(.white.opacity(0.7))
                                 .monospacedDigit()
                         }
-                        Text(update.source == .appStore ? "App Store" : "自动更新")
+                        Text(update.source == .appStore ? "App Store" : L("自动更新", "Sparkle"))
                             .font(.system(size: 11, weight: .semibold))
                             .padding(.horizontal, 7)
                             .padding(.vertical, 2)
                             .background(Capsule().fill(Color.white.opacity(0.12)))
                         Spacer()
                         if let notes = update.notesURL {
-                            Button("更新说明") { NSWorkspace.shared.open(notes) }.buttonStyle(.link)
+                            Button(L("更新说明", "Release Notes")) { NSWorkspace.shared.open(notes) }.buttonStyle(.link)
                         }
-                        PillButton(title: update.source == .appStore ? "去 App Store" : "打开并更新", prominent: true) {
+                        PillButton(title: update.source == .appStore ? L("去 App Store", "Open App Store") : L("打开并更新", "Open & Update"), prominent: true) {
                             updates.open(update)
                         }
                     }
@@ -564,10 +566,10 @@ struct UpdaterPanel: View {
             }
         } footer: {
             if let date = updates.lastChecked {
-                Text("上次检查：\(date.formatted(date: .omitted, time: .shortened))").foregroundStyle(.white.opacity(0.7))
+                Text(L("上次检查：\(date.formatted(Date.FormatStyle(date: .omitted, time: .shortened, locale: appLocale)))", "Last checked: \(date.formatted(Date.FormatStyle(date: .omitted, time: .shortened, locale: appLocale)))")).foregroundStyle(.white.opacity(0.7))
             }
             Spacer()
-            PillButton(title: "重新检查", icon: "arrow.clockwise", action: recheck)
+            PillButton(title: L("重新检查", "Check Again"), icon: "arrow.clockwise", action: recheck)
         }
     }
 }

@@ -39,22 +39,26 @@ struct SafeCleanApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
 
     var body: some Scene {
-        WindowGroup("放心清理") {
+        WindowGroup(L("放心清理", "SafeClean")) {
             RootView()
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 1180, height: 760)
         .commands { CommandGroup(replacing: .newItem) {} }
+        Settings {
+            SettingsView()
+        }
     }
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.regular)
+        NSApp.setActivationPolicy(DebugFlags.readOnly ? .accessory : .regular)
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.activate()
+        // 截图 / 录演示时不抢焦点，避免接住用户在别的应用里的点击或回车
+        if !DebugFlags.readOnly { NSApp.activate() }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
@@ -201,22 +205,22 @@ enum SelfTest {
         /// 不扫描磁盘，填几条示例数据，用来检查列表的样子。
         func loadSample() {
             var cat = JunkCategory(rule: JunkRules.all[0])
-            let caches = FS.url("Library/Caches")
+            let caches = URL(fileURLWithPath: "/private/tmp/SafeClean Sample/Library/Caches")
             cat.items = [
                 JunkItem(
                     url: caches.appendingPathComponent("ms-playwright"), name: "ms-playwright", size: 584_100_000, selected: false,
-                    note: "浏览器内核", hint: JunkScanner.browserEngineHint(for: "ms-playwright")),
+                    note: L("浏览器内核", "Browser engine"), hint: JunkScanner.browserEngineHint(for: "ms-playwright")),
                 JunkItem(url: caches.appendingPathComponent("GeoServices"), name: "GeoServices", size: 130_000_000, selected: true),
                 JunkItem(
                     url: caches.appendingPathComponent("com.anthropic.claudefordesktop"), name: "Claude  ·  com.anthropic.claudefordesktop",
-                    size: 2_200_000, selected: false, note: "运行中"),
+                    size: 2_200_000, selected: false, note: L("运行中", "Running")),
             ]
             for i in cat.items.indices { cat.items[i].defaultSelected = cat.items[i].selected }
             cat.scanned = true
             cat.expanded = true
             categories[0] = cat
             var logs = JunkCategory(rule: JunkRules.all[2])
-            logs.items = [JunkItem(url: FS.url("Library/Logs/CreativeCloud"), name: "CreativeCloud", size: 22_300_000, selected: true)]
+            logs.items = [JunkItem(url: URL(fileURLWithPath: "/private/tmp/SafeClean Sample/Library/Logs/CreativeCloud"), name: "CreativeCloud", size: 22_300_000, selected: true)]
             logs.scanned = true
             categories[2] = logs
             for c in categories.indices where !categories[c].scanned { categories[c].scanned = true }

@@ -19,15 +19,15 @@ import SwiftUI
                 if stage == "uninstaller" { state.apps.selectedID = state.apps.apps.first?.id }
             case (.clutter, _):
                 let c = state.clutter
-                let d = FS.url("Downloads")
+                let d = URL(fileURLWithPath: "/private/tmp/SafeClean Sample/Downloads")
                 c.large = [
                     ClutterFile(url: d.appendingPathComponent("Xcode_16.xip"), size: 3_400_000_000, modified: .now.addingTimeInterval(-86400 * 90)),
-                    ClutterFile(url: d.appendingPathComponent("会议录屏.mov"), size: 820_000_000, modified: .now.addingTimeInterval(-86400 * 12)),
+                    ClutterFile(url: d.appendingPathComponent(L("会议录屏.mov", "Meeting Recording.mov")), size: 820_000_000, modified: .now.addingTimeInterval(-86400 * 12)),
                 ]
                 c.duplicates = [
                     FileGroup(files: [
-                        ClutterFile(url: d.appendingPathComponent("合同.pdf"), size: 2_400_000, modified: .now.addingTimeInterval(-86400 * 40), note: "保留"),
-                        ClutterFile(url: d.appendingPathComponent("合同 (1).pdf"), size: 2_400_000, modified: .now, selected: true),
+                        ClutterFile(url: d.appendingPathComponent(L("合同.pdf", "Contract.pdf")), size: 2_400_000, modified: .now.addingTimeInterval(-86400 * 40), note: L("保留", "Keep")),
+                        ClutterFile(url: d.appendingPathComponent(L("合同 (1).pdf", "Contract (1).pdf")), size: 2_400_000, modified: .now, selected: true),
                     ])
                 ]
                 c.downloads = [ClutterFile(url: d.appendingPathComponent("installer.dmg"), size: 310_000_000, modified: .now.addingTimeInterval(-86400 * 70))]
@@ -44,10 +44,10 @@ import SwiftUI
                 state.junk.loadSample()
                 await state.performance.analyze()
                 state.updates.checkable = 12
-                let d = FS.url("Downloads")
+                let d = URL(fileURLWithPath: "/private/tmp/SafeClean Sample/Downloads")
                 state.clutter.downloadDuplicates = [
                     FileGroup(files: [
-                        ClutterFile(url: d.appendingPathComponent("a.pdf"), size: 2_400_000, modified: .now, note: "保留"),
+                        ClutterFile(url: d.appendingPathComponent("a.pdf"), size: 2_400_000, modified: .now, note: L("保留", "Keep")),
                         ClutterFile(url: d.appendingPathComponent("a (1).pdf"), size: 2_400_000, modified: .now, selected: true),
                     ])
                 ]

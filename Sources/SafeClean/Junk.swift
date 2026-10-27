@@ -40,13 +40,13 @@ enum JunkRules {
 
     static let all: [JunkRule] = [
         JunkRule(
-            id: "caches", title: "应用缓存",
-            detail: "应用为加速启动保存的缓存（含沙盒应用容器里的），删除后会按需重新生成。正在运行的应用、Playwright 等工具下载的浏览器内核默认不勾选。",
+            id: "caches", title: L("应用缓存", "App Caches"),
+            detail: L("应用为加速启动保存的缓存（含沙盒应用容器里的），删除后会按需重新生成。正在运行的应用、Playwright 等工具下载的浏览器内核默认不勾选。", "Caches apps keep to start faster (including those in sandbox containers). They're rebuilt as needed. Caches of running apps and browser engines downloaded by tools like Playwright aren't selected by default."),
             icon: "archivebox",
             sources: [
                 .contents("Library/Caches"), .containers("Data/Library/Caches"),
                 .allButLatest(
-                    name: "照片旧缓存", owner: "com.apple.Photos",
+                    name: L("照片旧缓存", "Old Photos cache"), owner: "com.apple.Photos",
                     path: "Library/Containers/com.apple.Photos/Data/Library/Application Support/Photos Desktop/0"),
             ],
             exclude: [
@@ -54,33 +54,33 @@ enum JunkRules {
                 "com.apple.containermanagerd", "com.apple.ap.adprivacyd", Bundle.main.bundleIdentifier ?? "",
             ]),
         JunkRule(
-            id: "electron", title: "Electron 应用缓存",
-            detail: "Slack、Discord、VS Code 这类 Electron 应用自带浏览器内核的网页缓存。",
+            id: "electron", title: L("Electron 应用缓存", "Electron App Caches"),
+            detail: L("Slack、Discord、VS Code 这类 Electron 应用自带浏览器内核的网页缓存。", "Web caches from the built-in browser of Electron apps like Slack, Discord and VS Code."),
             icon: "globe", sources: [.electronCaches]),
         JunkRule(
-            id: "logs", title: "日志文件", detail: "系统和应用写下的运行日志与崩溃报告。小于 10 KB 的不列出。",
+            id: "logs", title: L("日志文件", "Log Files"), detail: L("系统和应用写下的运行日志与崩溃报告。小于 10 KB 的不列出。", "Logs and crash reports written by macOS and apps. Files under 10 KB aren't listed."),
             icon: "doc.text", sources: [.contents("Library/Logs"), .containers("Data/Library/Logs")],
             minimumSize: 10_241),
         JunkRule(
-            id: "broken", title: "失效的启动项和偏好设置",
-            detail: "应用删掉后留下的启动代理（指向的程序已不存在），以及已经损坏、读不出来的偏好设置文件。",
+            id: "broken", title: L("失效的启动项和偏好设置", "Broken Launch Agents & Preferences"),
+            detail: L("应用删掉后留下的启动代理（指向的程序已不存在），以及已经损坏、读不出来的偏好设置文件。", "Launch agents left behind by deleted apps (their program no longer exists), and preference files that are damaged or unreadable."),
             icon: "bandage", sources: [.brokenLaunchAgents, .brokenPreferences], minimumSize: 0),
         JunkRule(
-            id: "media", title: "聊天和影音应用缓存",
-            detail: "微信聊天临时文件、QQ 音乐、腾讯视频、优酷、Telegram、Spotify、Adobe 的缓存。里面可能有聊天收到的图片文件或离线下载的内容，默认不勾选。",
+            id: "media", title: L("聊天和影音应用缓存", "Chat & Media App Caches"),
+            detail: L("微信聊天临时文件、QQ 音乐、腾讯视频、优酷、Telegram、Spotify、Adobe 的缓存。里面可能有聊天收到的图片文件或离线下载的内容，默认不勾选。", "Caches from WeChat, QQ Music, Tencent Video, Youku, Telegram, Spotify and Adobe. They may hold images and files received in chats or offline downloads, so they aren't selected by default."),
             icon: "bubble.left.and.bubble.right",
             sources: [
                 .appCache(
-                    name: "微信", owner: "com.tencent.xinWeChat",
+                    name: L("微信", "WeChat"), owner: "com.tencent.xinWeChat",
                     path: "Library/Containers/com.tencent.xinWeChat/Data/Library/Application Support/com.tencent.xinWeChat/2.0b4.0.9/*/Message/MessageTemp"),
                 .appCache(
-                    name: "QQ 音乐", owner: "com.tencent.QQMusicMac",
+                    name: L("QQ 音乐", "QQ Music"), owner: "com.tencent.QQMusicMac",
                     path: "Library/Containers/com.tencent.QQMusicMac/Data/Library/Application Support/QQMusicMac/iMusic"),
                 .appCache(
-                    name: "腾讯视频（已下载视频）", owner: "com.tencent.tenvideo",
+                    name: L("腾讯视频（已下载视频）", "Tencent Video (downloaded videos)"), owner: "com.tencent.tenvideo",
                     path: "Library/Containers/com.tencent.tenvideo/Data/Library/Application Support/Download/video"),
                 .appCache(
-                    name: "优酷播放缓存", owner: "com.youku.mac",
+                    name: L("优酷播放缓存", "Youku playback cache"), owner: "com.youku.mac",
                     path: "Library/Containers/com.youku.mac/Data/Documents/YTCORE_PLAYER_CACHE"),
                 .appCache(
                     name: "Telegram", owner: "ru.keepcoder.Telegram",
@@ -89,18 +89,18 @@ enum JunkRules {
                     name: "Telegram Desktop", owner: "org.telegram.desktop",
                     path: "Library/Application Support/Telegram Desktop/tdata/user_data"),
                 .appCache(
-                    name: "Telegram Desktop（App Store 版）", owner: "org.telegram.desktop",
+                    name: L("Telegram Desktop（App Store 版）", "Telegram Desktop (App Store)"), owner: "org.telegram.desktop",
                     path: "Library/Containers/org.telegram.desktop/Data/Library/Application Support/Telegram Desktop/tdata/user_data"),
                 .appCache(
                     name: "Spotify", owner: "com.spotify.client",
                     path: "Library/Application Support/Spotify/PersistentCache/Storage"),
                 .appCache(
-                    name: "Adobe 媒体缓存", owner: "com.adobe.PremierePro",
+                    name: L("Adobe 媒体缓存", "Adobe Media Cache"), owner: "com.adobe.PremierePro",
                     path: "Library/Application Support/Adobe/Common/Media Cache Files"),
             ],
             selectedByDefault: false),
         JunkRule(
-            id: "xcode", title: "Xcode 垃圾", detail: "DerivedData 编译产物、旧设备调试符号、文档缓存和模拟器缓存。",
+            id: "xcode", title: L("Xcode 垃圾", "Xcode Junk"), detail: L("DerivedData 编译产物、旧设备调试符号、文档缓存和模拟器缓存。", "DerivedData build products, old device support files, documentation cache and simulator caches."),
             icon: "hammer",
             sources: [
                 .contents("Library/Developer/Xcode/DerivedData"),
@@ -113,22 +113,22 @@ enum JunkRules {
                 .item("Library/Developer/CoreSimulator/Caches"),
             ]),
         JunkRule(
-            id: "dev", title: "开发工具缓存", detail: "npm、pip、Gradle、Cargo 的下载缓存，需要时会重新下载。",
+            id: "dev", title: L("开发工具缓存", "Developer Tool Caches"), detail: L("npm、pip、Gradle、Cargo 的下载缓存，需要时会重新下载。", "Download caches for npm, pip, Gradle and Cargo. They're downloaded again when needed."),
             icon: "shippingbox",
             sources: [.item(".npm/_cacache"), .item(".cache/pip"), .item(".gradle/caches"), .item(".cargo/registry/cache")]),
         JunkRule(
-            id: "mail", title: "邮件附件下载", detail: "在“邮件”里打开过的附件副本，邮件本身的附件不受影响。",
+            id: "mail", title: L("邮件附件下载", "Mail Attachment Downloads"), detail: L("在“邮件”里打开过的附件副本，邮件本身的附件不受影响。", "Copies of attachments you opened in Mail. The attachments in your messages aren't affected."),
             icon: "envelope", sources: [.contents("Library/Containers/com.apple.mail/Data/Library/Mail Downloads")]),
         JunkRule(
-            id: "ios", title: "iOS 设备备份", detail: "iPhone / iPad 的本地备份。确认不再需要后再勾选。",
+            id: "ios", title: L("iOS 设备备份", "iOS Device Backups"), detail: L("iPhone / iPad 的本地备份。确认不再需要后再勾选。", "Local iPhone and iPad backups. Only select them once you're sure you don't need them."),
             icon: "iphone", sources: [.contents("Library/Application Support/MobileSync/Backup")],
             selectedByDefault: false),
         JunkRule(
-            id: "ai", title: "本地 AI 模型", detail: "Ollama、LM Studio、Hugging Face 下载的模型，单个可达数 GB。确认项目不再使用后再勾选。",
+            id: "ai", title: L("本地 AI 模型", "Local AI Models"), detail: L("Ollama、LM Studio、Hugging Face 下载的模型，单个可达数 GB。确认项目不再使用后再勾选。", "Models downloaded by Ollama, LM Studio and Hugging Face — several GB each. Only select them once your projects no longer need them."),
             icon: "cpu", sources: [.item(".ollama/models"), .contents(".lmstudio/models"), .item(".cache/huggingface/hub")],
             selectedByDefault: false),
         JunkRule(
-            id: "trash", title: "废纸篓", detail: "勾选后会永久删除废纸篓里的文件，无法恢复。",
+            id: "trash", title: L("废纸篓", "Trash"), detail: L("勾选后会永久删除废纸篓里的文件，无法恢复。", "Selecting this permanently deletes the files in the Trash. This can't be undone."),
             icon: "trash", sources: [.contents(".Trash")], selectedByDefault: false, permanent: true),
     ]
 }
@@ -195,16 +195,16 @@ enum JunkScanner {
             var item = JunkItem(url: c.url, name: c.name, size: size, selected: rule.selectedByDefault)
             if let owner = c.owner, running.contains(owner) {
                 item.selected = false
-                item.note = "运行中"
+                item.note = L("运行中", "Running")
             }
             if let hint = browserEngineHint(for: c.url.lastPathComponent) {
                 item.selected = false
-                item.note = "浏览器内核"
+                item.note = L("浏览器内核", "Browser engine")
                 item.hint = hint
             }
             if let entry = verdicts[c.url.path], let hint = Regrowth.hint(for: entry) {
                 item.selected = false
-                item.note = "清了会长回来"
+                item.note = L("清了会长回来", "Grows back")
                 item.hint = hint
             }
             if c.url.lastPathComponent == "hub", c.url.deletingLastPathComponent().lastPathComponent == "huggingface" {
@@ -222,12 +222,13 @@ enum JunkScanner {
             .map { $0.dropFirst("models--".count).replacingOccurrences(of: "--", with: "/") }
             .sorted()
         guard !models.isEmpty else { return nil }
-        return "包含：\(models.joined(separator: "、"))。删掉后，用到它们的工具下次运行时会重新下载。"
+        let list = models.joined(separator: L("、", ", "))
+        return L("包含：\(list)。删掉后，用到它们的工具下次运行时会重新下载。", "Contains \(list). Tools that use them will download them again on next run.")
     }
 
     static func browserEngineHint(for name: String) -> String? {
         JunkRules.browserEngines[name].map {
-            "\($0.tool) 下载的浏览器内核，不是普通缓存。删掉后用到它的工具会报错，要重新下载：\($0.reinstall)"
+            L("\($0.tool) 下载的浏览器内核，不是普通缓存。删掉后用到它的工具会报错，要重新下载：\($0.reinstall)", "A browser engine downloaded by \($0.tool), not a regular cache. Tools that use it will fail until you download it again: \($0.reinstall)")
         }
     }
 
@@ -259,7 +260,7 @@ enum JunkScanner {
         case .brokenLaunchAgents:
             return FS.children(of: FS.url("Library/LaunchAgents"))
                 .filter { $0.pathExtension == "plist" && LaunchAgents.isBroken($0) }
-                .map { Candidate(url: $0, name: "启动代理  ·  \($0.lastPathComponent)") }
+                .map { Candidate(url: $0, name: L("启动代理  ·  \($0.lastPathComponent)", "Launch agent  ·  \($0.lastPathComponent)")) }
         case .appCache(let name, let owner, let path):
             return expand(path).map { url, matched in
                 Candidate(url: url, name: matched.isEmpty ? name : "\(name)  ·  \(matched.joined(separator: "/"))", owner: owner)
@@ -273,7 +274,7 @@ enum JunkScanner {
         case .brokenPreferences:
             return FS.children(of: FS.url("Library/Preferences"))
                 .filter { $0.pathExtension == "plist" && isBrokenPlist($0) }
-                .map { Candidate(url: $0, name: "偏好设置  ·  \($0.lastPathComponent)") }
+                .map { Candidate(url: $0, name: L("偏好设置  ·  \($0.lastPathComponent)", "Preferences  ·  \($0.lastPathComponent)")) }
         }
     }
 
@@ -339,8 +340,8 @@ enum JunkScanner {
             let info = NSDictionary(contentsOf: url.appendingPathComponent("Info.plist")),
             let device = info["Device Name"] as? String
         {
-            let date = (info["Last Backup Date"] as? Date).map { $0.formatted(date: .abbreviated, time: .omitted) }
-            return date.map { "\(device)（\($0)）" } ?? device
+            let date = (info["Last Backup Date"] as? Date).map { $0.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted, locale: appLocale)) }
+            return date.map { L("\(device)（\($0)）", "\(device) (\($0))") } ?? device
         }
         if key.contains("."), let name = appName(for: key) {
             return "\(name)  ·  \(key)"
@@ -434,18 +435,19 @@ final class JunkModel: ObservableObject {
         let toDelete = selected.filter(\.permanent).map(\.item)
         var lines: [String] = []
         if !toTrash.isEmpty {
-            lines.append("将把 \(toTrash.count) 项（\(FS.format(toTrash.reduce(0) { $0 + $1.size }))）移到废纸篓，需要时可以从废纸篓恢复。")
+            lines.append(L("将把 \(toTrash.count) 项（\(FS.format(toTrash.reduce(0) { $0 + $1.size }))）移到废纸篓，需要时可以从废纸篓恢复。", "\(plural(toTrash.count, "item", "items")) (\(FS.format(toTrash.reduce(0) { $0 + $1.size }))) will be moved to the Trash. You can put them back from there."))
         }
         if !toDelete.isEmpty {
-            lines.append("废纸篓中的 \(toDelete.count) 项（\(FS.format(toDelete.reduce(0) { $0 + $1.size }))）将被永久删除，无法恢复。")
+            lines.append(L("废纸篓中的 \(toDelete.count) 项（\(FS.format(toDelete.reduce(0) { $0 + $1.size }))）将被永久删除，无法恢复。", "\(plural(toDelete.count, "item", "items")) in the Trash (\(FS.format(toDelete.reduce(0) { $0 + $1.size }))) will be permanently deleted. This can't be undone."))
         }
-        let running = toTrash.filter { $0.note == "运行中" }.count
+        let running = toTrash.filter { $0.note == L("运行中", "Running") }.count
         if running > 0 {
-            lines.append("其中 \(running) 项属于正在运行的应用，清理后这些应用可能出错，最好先把它们退出。")
+            lines.append(L("其中 \(running) 项属于正在运行的应用，清理后这些应用可能出错，最好先把它们退出。", "\(running) of them belong to running apps, which may misbehave afterwards. It's best to quit those apps first."))
         }
-        let engines = toTrash.filter { $0.note == "浏览器内核" }.map(\.name)
+        let engines = toTrash.filter { $0.note == L("浏览器内核", "Browser engine") }.map(\.name)
         if !engines.isEmpty {
-            lines.append("包含浏览器内核（\(engines.joined(separator: "、"))），删掉后用到它的工具需要重新下载。")
+            let list = engines.joined(separator: L("、", ", "))
+            lines.append(L("包含浏览器内核（\(list)），删掉后用到它的工具需要重新下载。", "Includes browser engines (\(list)). Tools that use them will need to download them again."))
         }
         return lines.joined(separator: "\n\n")
     }
@@ -473,8 +475,8 @@ struct CleanupView: View {
                 VStack(spacing: 0) {
                     StageTopBar(title: module.title)
                     ScanningStage(
-                        module: module, title: "正在扫描…",
-                        detail: model.scanningTitle.isEmpty ? "准备中" : "正在查看：\(model.scanningTitle)",
+                        module: module, title: L("正在扫描…", "Scanning…"),
+                        detail: model.scanningTitle.isEmpty ? L("准备中", "Getting ready") : L("正在查看：\(model.scanningTitle)", "Looking at: \(model.scanningTitle)"),
                         progress: model.progress, stop: nil)
                 }
             case .ready where showDetails:
@@ -484,18 +486,18 @@ struct CleanupView: View {
             case .cleaning:
                 VStack(spacing: 0) {
                     StageTopBar(title: module.title)
-                    ScanningStage(module: module, title: "正在清理…", detail: "把选中的项目移到废纸篓", stop: nil)
+                    ScanningStage(module: module, title: L("正在清理…", "Cleaning…"), detail: L("把选中的项目移到废纸篓", "Moving the selected items to the Trash"), stop: nil)
                 }
             case .done:
                 done
             }
         }
-        .alert("确认清理", isPresented: $confirming) {
-            Button("清理", role: .destructive) {
+        .alert(L("确认清理", "Clean Up?"), isPresented: $confirming) {
+            Button(L("清理", "Clean"), role: .destructive) {
                 showDetails = false
                 model.clean()
             }
-            Button("取消", role: .cancel) {}
+            Button(L("取消", "Cancel"), role: .cancel) {}
         } message: {
             Text(model.confirmMessage)
         }
@@ -504,14 +506,14 @@ struct CleanupView: View {
 
     private var summary: some View {
         VStack(spacing: 0) {
-            StageTopBar(leadingTitle: "重新开始", leadingAction: { model.reset() }, title: module.title)
+            StageTopBar(leadingTitle: L("重新开始", "Start Over"), leadingAction: { model.reset() }, title: module.title)
             ResultStage(
                 module: module,
-                headline: model.total > 0 ? "找到 \(FS.format(model.total)) 垃圾" : "很干净，没找到垃圾",
+                headline: model.total > 0 ? L("找到 \(FS.format(model.total)) 垃圾", "Found \(FS.format(model.total)) of junk") : L("很干净，没找到垃圾", "All clean — no junk found"),
                 subline: model.total > 0
-                    ? "已勾选 \(FS.format(model.selectedSize))：删了会自动重新生成，可以放心一键清理。其余的有代价，要你自己决定。"
-                    : "过段时间再来扫一次吧。",
-                primaryTitle: "清理", primaryDisabled: model.selected.isEmpty, primaryAction: { confirming = true }
+                    ? L("已勾选 \(FS.format(model.selectedSize))：删了会自动重新生成，可以放心一键清理。其余的有代价，要你自己决定。", "\(FS.format(model.selectedSize)) is selected: it regenerates on its own, so it's safe to clean in one click. The rest has a cost — your call.")
+                    : L("过段时间再来扫一次吧。", "Come back and scan again in a while."),
+                primaryTitle: L("清理", "Clean"), primaryDisabled: model.selected.isEmpty, primaryAction: { confirming = true }
             ) {
                 let top = model.categories.filter { $0.total > 0 }.sorted { $0.total > $1.total }.prefix(4)
                 if !top.isEmpty {
@@ -522,14 +524,14 @@ struct CleanupView: View {
                     }
                     .padding(14)
                     .glass(cornerRadius: 16)
-                    PillButton(title: "查看详情", icon: "list.bullet") { showDetails = true }
+                    PillButton(title: L("查看详情", "Review Details"), icon: "list.bullet") { showDetails = true }
                 }
             }
         }
     }
 
     private var details: some View {
-        DetailFrame(title: "清理详情", back: { showDetails = false }) {
+        DetailFrame(title: L("清理详情", "Cleanup Details"), back: { showDetails = false }) {
             List {
                 ForEach($model.categories) { $cat in
                     if !cat.items.isEmpty {
@@ -547,15 +549,15 @@ struct CleanupView: View {
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
         } footer: {
-            Text("已选 \(model.selected.count) 项，共 \(FS.format(model.selectedSize))")
+            Text(L("已选 \(model.selected.count) 项，共 \(FS.format(model.selectedSize))", "\(model.selected.count) selected, \(FS.format(model.selectedSize))"))
                 .foregroundStyle(.white.opacity(0.75))
                 .monospacedDigit()
             Spacer()
-            PillButton(title: "全选") { model.selectAll() }
-                .help("勾选除“废纸篓”以外的所有项目。废纸篓会永久删除，需要单独勾选。")
-            PillButton(title: "恢复默认") { model.restoreDefaults() }
-                .help("回到扫描时的默认勾选：正在运行的应用、浏览器内核、清了会长回来的缓存、聊天缓存、AI 模型、废纸篓不勾。")
-            ActionCapsule(title: "一键清理", accent: module.accent, disabled: model.selected.isEmpty) { confirming = true }
+            PillButton(title: L("全选", "Select All")) { model.selectAll() }
+                .help(L("勾选除“废纸篓”以外的所有项目。废纸篓会永久删除，需要单独勾选。", "Selects everything except the Trash, which deletes permanently and must be selected on its own."))
+            PillButton(title: L("恢复默认", "Restore Defaults")) { model.restoreDefaults() }
+                .help(L("回到扫描时的默认勾选：正在运行的应用、浏览器内核、清了会长回来的缓存、聊天缓存、AI 模型、废纸篓不勾。", "Back to the default selection: running apps, browser engines, caches that grow back, chat caches, AI models and the Trash stay unselected."))
+            ActionCapsule(title: L("一键清理", "Clean Up"), accent: module.accent, disabled: model.selected.isEmpty) { confirming = true }
         }
     }
 
@@ -563,20 +565,20 @@ struct CleanupView: View {
         VStack(spacing: 0) {
             StageTopBar(title: module.title)
             ResultStage(
-                module: module, symbol: "checkmark.seal.fill", headline: "清理完成",
+                module: module, symbol: "checkmark.seal.fill", headline: L("清理完成", "Cleanup Complete"),
                 subline: model.result?.summary ?? "",
-                primaryTitle: "完成", primaryAction: { model.reset() }
+                primaryTitle: L("完成", "Done"), primaryAction: { model.reset() }
             ) {
                 VStack(alignment: .leading, spacing: 12) {
                     if let r = model.result, r.trashedCount > 0 {
-                        Text("东西都还在废纸篓里，随时能放回；清空废纸篓后才真正腾出空间。")
+                        Text(L("东西都还在废纸篓里，随时能放回；清空废纸篓后才真正腾出空间。", "Everything is still in the Trash and can be put back. Space is freed once you empty the Trash."))
                             .font(.system(size: 14))
                             .foregroundStyle(.white.opacity(0.75))
                     }
                     HStack(spacing: 10) {
-                        PillButton(title: "打开废纸篓", icon: "trash") { NSWorkspace.shared.open(FS.url(".Trash")) }
+                        PillButton(title: L("打开废纸篓", "Open Trash"), icon: "trash") { NSWorkspace.shared.open(FS.url(".Trash")) }
                         if let r = model.result, !r.failures.isEmpty {
-                            PillButton(title: "\(r.failures.count) 项没清掉", icon: "exclamationmark.triangle") { showFailures = true }
+                            PillButton(title: L("\(r.failures.count) 项没清掉", "\(r.failures.count) not cleaned"), icon: "exclamationmark.triangle") { showFailures = true }
                                 .popover(isPresented: $showFailures) { FailureList(failures: r.failures) }
                         }
                     }
@@ -675,7 +677,7 @@ struct ItemRow: View {
                 Image(systemName: "magnifyingglass")
             }
             .buttonStyle(.borderless)
-            .help("在 Finder 中显示")
+            .help(L("在 Finder 中显示", "Show in Finder"))
         }
         .help(FS.abbreviate(item.url.path))
     }

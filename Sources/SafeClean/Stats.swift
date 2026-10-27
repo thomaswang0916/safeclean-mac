@@ -12,21 +12,21 @@ struct StatsEvent: Codable, Identifiable {
 
         var title: String {
             switch self {
-            case .junk: "系统垃圾"
-            case .duplicates: "重复文件"
-            case .personal: "个人文件"
-            case .apps: "应用程序"
-            case .maintenance: "维护任务"
+            case .junk: L("系统垃圾", "System Junk")
+            case .duplicates: L("重复文件", "Duplicates")
+            case .personal: L("个人文件", "Personal Files")
+            case .apps: L("应用程序", "Applications")
+            case .maintenance: L("维护任务", "Maintenance")
             }
         }
 
         /// 清理量条里的分组
         var group: String {
             switch self {
-            case .junk: "系统垃圾"
-            case .duplicates, .personal: "个人文件"
-            case .apps: "应用程序"
-            case .maintenance: "维护"
+            case .junk: L("系统垃圾", "System Junk")
+            case .duplicates, .personal: L("个人文件", "Personal Files")
+            case .apps: L("应用程序", "Applications")
+            case .maintenance: L("维护", "Maintenance")
             }
         }
     }
@@ -73,6 +73,7 @@ final class StatsStore: ObservableObject {
     }
 
     func record(_ kind: StatsEvent.Kind, bytes: Int64, items: Int) {
+        guard !DebugFlags.readOnly else { return }
         guard items > 0 else { return }
         events.append(StatsEvent(date: .now, kind: kind, bytes: bytes, items: items))
         save()
@@ -152,16 +153,16 @@ final class StatsModel: ObservableObject {
         var reasons: [String] = []
         let disk = state.disk
         let freeRatio = disk.total > 0 ? Double(disk.free) / Double(disk.total) : 1
-        if freeRatio < 0.1 { reasons.append("磁盘只剩 \(Int(freeRatio * 100))% 可用") }
+        if freeRatio < 0.1 { reasons.append(L("磁盘只剩 \(Int(freeRatio * 100))% 可用", "Only \(Int(freeRatio * 100))% of the disk is free")) }
         let mem = state.performance
-        if mem.memoryTotal > 0, Double(mem.memoryUsed) / Double(mem.memoryTotal) > 0.9 { reasons.append("内存使用超过 90%") }
+        if mem.memoryTotal > 0, Double(mem.memoryUsed) / Double(mem.memoryTotal) > 0.9 { reasons.append(L("内存使用超过 90%", "Memory usage is over 90%")) }
         if state.junk.phase == .ready, state.junk.selectedSize > 2_000_000_000 {
-            reasons.append("有 \(FS.format(state.junk.selectedSize)) 垃圾待清理")
+            reasons.append(L("有 \(FS.format(state.junk.selectedSize)) 垃圾待清理", "\(FS.format(state.junk.selectedSize)) of junk waiting to be cleaned"))
         }
         if reasons.isEmpty {
-            return Health(title: "良好", color: Color(hex: 0x5EEAD4), reasons: ["磁盘空间充足", "内存压力正常"])
+            return Health(title: L("良好", "Good"), color: Color(hex: 0x5EEAD4), reasons: [L("磁盘空间充足", "Plenty of disk space"), L("内存压力正常", "Memory pressure is normal")])
         }
-        return Health(title: reasons.count > 1 ? "需要处理" : "需要注意", color: Color(hex: 0xFFC46B), reasons: reasons)
+        return Health(title: reasons.count > 1 ? L("需要处理", "Needs Attention") : L("需要注意", "Check This"), color: Color(hex: 0xFFC46B), reasons: reasons)
     }
 
     func recommendations(state: AppState) -> [Recommendation] {
@@ -169,19 +170,20 @@ final class StatsModel: ObservableObject {
         if !unusedApps.isEmpty {
             list.append(
                 Recommendation(
-                    id: "unused", icon: "xmark.bin.fill", title: "卸载不常用的应用",
-                    detail: "有 \(unusedApps.count) 个应用超过 \(Self.unusedDays) 天没打开过，看看还要不要。", module: .applications
+                    id: "unused", icon: "xmark.bin.fill", title: L("卸载不常用的应用", "Uninstall Unused Apps"),
+                    detail: L("有 \(unusedApps.count) 个应用超过 \(Self.unusedDays) 天没打开过，看看还要不要。", "\(plural(unusedApps.count, "app", "apps")) haven't been opened in over \(Self.unusedDays) days. See if you still need them."), module: .applications
                 ) {
                     state.apps.screen = .uninstaller
                     state.apps.selectedID = self.unusedApps.first?.0.id
                     state.module = .applications
                 })
         }
+        let updateNames = state.updates.updates.prefix(3).map(\.app.name).joined(separator: L("、", ", "))
         if !state.updates.updates.isEmpty {
             list.append(
                 Recommendation(
-                    id: "updates", icon: "arrow.down.app.fill", title: "更新应用",
-                    detail: "\(state.updates.updates.count) 个应用有新版本：\(state.updates.updates.prefix(3).map(\.app.name).joined(separator: "、"))。",
+                    id: "updates", icon: "arrow.down.app.fill", title: L("更新应用", "Update Apps"),
+                    detail: L("\(state.updates.updates.count) 个应用有新版本：\(updateNames)。", "\(plural(state.updates.updates.count, "app", "apps")) have updates: \(updateNames)."),
                     module: .applications
                 ) {
                     state.apps.screen = .updater
@@ -192,22 +194,22 @@ final class StatsModel: ObservableObject {
         case .ready where state.junk.selectedSize > 0:
             list.append(
                 Recommendation(
-                    id: "junk", icon: "bubbles.and.sparkles.fill", title: "清理系统垃圾",
-                    detail: "上次扫描找到 \(FS.format(state.junk.selectedSize)) 可以放心清理的垃圾。", module: .cleanup
+                    id: "junk", icon: "bubbles.and.sparkles.fill", title: L("清理系统垃圾", "Clean System Junk"),
+                    detail: L("上次扫描找到 \(FS.format(state.junk.selectedSize)) 可以放心清理的垃圾。", "The last scan found \(FS.format(state.junk.selectedSize)) of junk that's safe to clean."), module: .cleanup
                 ) { state.module = .cleanup })
         case .idle:
             list.append(
                 Recommendation(
-                    id: "junk", icon: "bubbles.and.sparkles.fill", title: "扫描系统垃圾",
-                    detail: "缓存和日志会慢慢变多，定期扫一下。", module: .cleanup
+                    id: "junk", icon: "bubbles.and.sparkles.fill", title: L("扫描系统垃圾", "Scan for System Junk"),
+                    detail: L("缓存和日志会慢慢变多，定期扫一下。", "Caches and logs pile up over time. Scan now and then."), module: .cleanup
                 ) { state.module = .cleanup })
         default: break
         }
         if state.performance.heavyCount > 0 {
             list.append(
                 Recommendation(
-                    id: "heavy", icon: "gauge.with.dots.needle.67percent", title: "退出高耗能应用",
-                    detail: "\(state.performance.heavyCount) 个应用各占用超过 1 GB 内存。", module: .performance
+                    id: "heavy", icon: "gauge.with.dots.needle.67percent", title: L("退出高耗能应用", "Quit Heavy Apps"),
+                    detail: L("\(state.performance.heavyCount) 个应用各占用超过 1 GB 内存。", "\(plural(state.performance.heavyCount, "app", "apps")) are each using over 1 GB of memory."), module: .performance
                 ) {
                     state.performance.screen = .heavy
                     state.module = .performance
@@ -216,14 +218,14 @@ final class StatsModel: ObservableObject {
         if state.disk.total > 0, Double(state.disk.free) / Double(state.disk.total) < 0.15 {
             list.append(
                 Recommendation(
-                    id: "space", icon: "circle.hexagongrid.fill", title: "找出占空间的文件夹",
-                    detail: "磁盘可用空间不多了，用空间透镜看看是谁占的。", module: .spaceLens
+                    id: "space", icon: "circle.hexagongrid.fill", title: L("找出占空间的文件夹", "Find Space-Hogging Folders"),
+                    detail: L("磁盘可用空间不多了，用空间透镜看看是谁占的。", "Free space is running low. Use Space Lens to see what's taking it."), module: .spaceLens
                 ) { state.module = .spaceLens })
         }
         list.append(
             Recommendation(
-                id: "maintenance", icon: "wrench.and.screwdriver.fill", title: "运行维护任务",
-                detail: "释放内存、刷新 DNS 缓存、重置快速查看缓存。", module: .performance
+                id: "maintenance", icon: "wrench.and.screwdriver.fill", title: L("运行维护任务", "Run Maintenance Tasks"),
+                detail: L("释放内存、刷新 DNS 缓存、重置快速查看缓存。", "Free up RAM, flush the DNS cache and reset the Quick Look cache."), module: .performance
             ) {
                 state.performance.screen = .maintenance
                 state.module = .performance
@@ -244,9 +246,9 @@ struct StatsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 HStack(alignment: .lastTextBaseline) {
-                    Text("统计数据").font(.system(size: 44, weight: .bold))
+                    Text(L("统计数据", "Statistics")).font(.system(size: 44, weight: .bold))
                     Spacer()
-                    Text("自 \(store.since.formatted(date: .long, time: .omitted))").foregroundStyle(.white.opacity(0.65))
+                    Text(L("自 \(store.since.formatted(Date.FormatStyle(date: .long, time: .omitted, locale: appLocale)))", "Since \(store.since.formatted(Date.FormatStyle(date: .long, time: .omitted, locale: appLocale)))")).foregroundStyle(.white.opacity(0.65))
                 }
                 HStack(alignment: .top, spacing: 18) {
                     healthCard.frame(maxWidth: .infinity)
@@ -285,11 +287,11 @@ struct StatsView: View {
                     .shadow(color: health.color.opacity(0.7), radius: 18)
                     .padding(.top, 6)
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Mac 健康度").font(.system(size: 15)).foregroundStyle(.white.opacity(0.75))
+                    Text(L("Mac 健康度", "Mac Health")).font(.system(size: 15)).foregroundStyle(.white.opacity(0.75))
                     Text(health.title).font(.system(size: 34, weight: .bold)).foregroundStyle(health.color)
-                    Text(DebugFlags.deviceName ?? Host.current().localizedName ?? "这台 Mac").font(.system(size: 14)).foregroundStyle(.white.opacity(0.7))
+                    Text(DebugFlags.deviceName ?? Host.current().localizedName ?? L("这台 Mac", "This Mac")).font(.system(size: 14)).foregroundStyle(.white.opacity(0.7))
                     ForEach(health.reasons, id: \.self) { r in
-                        Label(r, systemImage: health.title == "良好" ? "checkmark" : "exclamationmark.triangle")
+                        Label(r, systemImage: health.title == L("良好", "Good") ? "checkmark" : "exclamationmark.triangle")
                             .font(.system(size: 12))
                             .foregroundStyle(.white.opacity(0.75))
                     }
@@ -298,7 +300,7 @@ struct StatsView: View {
                     HStack {
                         Text("Macintosh HD").font(.system(size: 15, weight: .semibold))
                         Spacer()
-                        Text("已用 \(FS.format(disk.total - disk.free)) / \(FS.format(disk.total))")
+                        Text(L("已用 \(FS.format(disk.total - disk.free)) / \(FS.format(disk.total))", "\(FS.format(disk.total - disk.free)) used of \(FS.format(disk.total))"))
                             .font(.system(size: 13))
                             .foregroundStyle(.white.opacity(0.75))
                             .monospacedDigit()
@@ -318,13 +320,13 @@ struct StatsView: View {
 
     // 清理总量
     private var totalCard: some View {
-        let groups: [(String, Color)] = [("系统垃圾", Color(hex: 0x4ADE80)), ("个人文件", Color(hex: 0x2DD4BF)), ("应用程序", Color(hex: 0x60A5FA))]
+        let groups: [(String, Color)] = [(L("系统垃圾", "System Junk"), Color(hex: 0x4ADE80)), (L("个人文件", "Personal Files"), Color(hex: 0x2DD4BF)), (L("应用程序", "Applications"), Color(hex: 0x60A5FA))]
         let total = max(store.totalBytes, 1)
         return StatCard {
             VStack(alignment: .leading, spacing: 8) {
-                Text("清理总量").font(.system(size: 15)).foregroundStyle(.white.opacity(0.75))
+                Text(L("清理总量", "Total Cleaned")).font(.system(size: 15)).foregroundStyle(.white.opacity(0.75))
                 Text(FS.format(store.totalBytes)).font(.system(size: 34, weight: .bold)).monospacedDigit()
-                Text(store.events.isEmpty ? "清理一次后这里会开始记录" : "移到废纸篓或直接删除的总大小")
+                Text(store.events.isEmpty ? L("清理一次后这里会开始记录", "Starts recording after your first cleanup") : L("移到废纸篓或直接删除的总大小", "Total moved to the Trash or deleted"))
                     .font(.system(size: 12))
                     .foregroundStyle(.white.opacity(0.6))
                 Spacer()
@@ -363,14 +365,14 @@ struct StatsView: View {
     private var activityCard: some View {
         StatCard {
             VStack(alignment: .leading, spacing: 8) {
-                Text("处理过的项目").font(.system(size: 15)).foregroundStyle(.white.opacity(0.75))
-                Text("\(store.totalItems) 项").font(.system(size: 34, weight: .bold)).monospacedDigit()
+                Text(L("处理过的项目", "Items Handled")).font(.system(size: 15)).foregroundStyle(.white.opacity(0.75))
+                Text(L("\(store.totalItems) 项", "\(plural(store.totalItems, "item", "items"))")).font(.system(size: 34, weight: .bold)).monospacedDigit()
                 Chart {
                     ForEach(Array(store.cumulative.enumerated()), id: \.offset) { _, point in
-                        AreaMark(x: .value("日期", point.0), y: .value("累计", Double(point.1)))
+                        AreaMark(x: .value(L("日期", "Date"), point.0), y: .value(L("累计", "Total"), Double(point.1)))
                             .foregroundStyle(LinearGradient(colors: [Color(hex: 0xA78BFA).opacity(0.5), .clear], startPoint: .top, endPoint: .bottom))
                             .interpolationMethod(.monotone)
-                        LineMark(x: .value("日期", point.0), y: .value("累计", Double(point.1)))
+                        LineMark(x: .value(L("日期", "Date"), point.0), y: .value(L("累计", "Total"), Double(point.1)))
                             .foregroundStyle(Color(hex: 0xC4B5FD))
                             .interpolationMethod(.monotone)
                     }
@@ -382,7 +384,7 @@ struct StatsView: View {
                     HStack {
                         Text(kind.title).font(.system(size: 13)).foregroundStyle(.white.opacity(0.8))
                         Spacer()
-                        Text(kind == .maintenance ? "\(store.items(kind)) 次" : "\(store.items(kind)) 项")
+                        Text(kind == .maintenance ? L("\(store.items(kind)) 次", "\(plural(store.items(kind), "run", "runs"))") : L("\(store.items(kind)) 项", "\(plural(store.items(kind), "item", "items"))"))
                             .font(.system(size: 13, weight: .semibold))
                             .monospacedDigit()
                     }
@@ -397,7 +399,7 @@ struct StatsView: View {
         return StatCard {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    Text("\(recs.count) 条优化建议").font(.system(size: 15, weight: .semibold))
+                    Text(L("\(recs.count) 条优化建议", "\(recs.count) Recommendations")).font(.system(size: 15, weight: .semibold))
                     Spacer()
                     if !model.loaded { ProgressView().controlSize(.small) }
                 }
@@ -433,10 +435,10 @@ struct StatsView: View {
     private var historyCard: some View {
         StatCard {
             VStack(alignment: .leading, spacing: 10) {
-                Text("最近记录").font(.system(size: 15, weight: .semibold))
+                Text(L("最近记录", "Recent Activity")).font(.system(size: 15, weight: .semibold))
                 if store.events.isEmpty {
                     Spacer()
-                    Text("还没有记录。清理、卸载、运行维护任务后会出现在这里。")
+                    Text(L("还没有记录。清理、卸载、运行维护任务后会出现在这里。", "Nothing yet. Cleanups, uninstalls and maintenance runs will show up here."))
                         .font(.system(size: 13))
                         .foregroundStyle(.white.opacity(0.6))
                         .frame(maxWidth: .infinity)
@@ -444,14 +446,14 @@ struct StatsView: View {
                 } else {
                     ForEach(store.events.suffix(8).reversed()) { e in
                         HStack {
-                            Text(e.date.formatted(.dateTime.month().day().hour().minute()))
+                            Text(e.date.formatted(.dateTime.month().day().hour().minute().locale(appLocale)))
                                 .font(.system(size: 12))
                                 .foregroundStyle(.white.opacity(0.6))
                                 .lineLimit(1)
                                 .frame(width: 120, alignment: .leading)
                             Text(e.kind.title).font(.system(size: 13, weight: .semibold))
                             Spacer()
-                            Text(e.kind == .maintenance ? "\(e.items) 项任务" : "\(e.items) 项 · \(FS.format(e.bytes))")
+                            Text(e.kind == .maintenance ? L("\(e.items) 项任务", "\(plural(e.items, "task", "tasks"))") : L("\(e.items) 项 · \(FS.format(e.bytes))", "\(plural(e.items, "item", "items")) · \(FS.format(e.bytes))"))
                                 .font(.system(size: 13))
                                 .monospacedDigit()
                         }

@@ -30,10 +30,10 @@ enum ClutterKind: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .large: "大型文件"
-        case .duplicates: "重复文件"
-        case .similar: "相似图片"
-        case .downloads: "旧的下载项"
+        case .large: L("大型文件", "Large Files")
+        case .duplicates: L("重复文件", "Duplicates")
+        case .similar: L("相似图片", "Similar Photos")
+        case .downloads: L("旧的下载项", "Old Downloads")
         }
     }
 
@@ -48,10 +48,10 @@ enum ClutterKind: String, CaseIterable, Identifiable {
 
     var explanation: String {
         switch self {
-        case .large: "大于 100 MB 的文件，默认不勾，自己看哪些不要了。"
-        case .duplicates: "内容完全一样、不小于 1 MB 的文件。每组保留修改时间最早的一份，其余默认勾选。代码仓库、依赖目录和剪辑软件的素材库不参与比对。"
-        case .similar: "看起来几乎一样的照片（连拍、截图、改过尺寸）。默认都不勾，挑出不要的。"
-        case .downloads: "下载文件夹里 30 天以上没动过的东西，默认不勾。"
+        case .large: L("大于 100 MB 的文件，默认不勾，自己看哪些不要了。", "Files over 100 MB. Nothing is selected — pick the ones you no longer need.")
+        case .duplicates: L("内容完全一样、不小于 1 MB 的文件。每组保留修改时间最早的一份，其余默认勾选。代码仓库、依赖目录和剪辑软件的素材库不参与比对。", "Identical files of 1 MB or more. The oldest copy in each group is kept and the rest are selected. Code repositories, dependency folders and video-editor libraries are skipped.")
+        case .similar: L("看起来几乎一样的照片（连拍、截图、改过尺寸）。默认都不勾，挑出不要的。", "Photos that look nearly the same (bursts, screenshots, resized copies). Nothing is selected — pick the ones you don't want.")
+        case .downloads: L("下载文件夹里 30 天以上没动过的东西，默认不勾。", "Things in Downloads untouched for 30+ days. Nothing is selected by default.")
         }
     }
 }
@@ -142,7 +142,7 @@ enum ClutterScanner {
                     let files = sorted.enumerated().map { index, entry in
                         ClutterFile(
                             url: entry.url, size: entry.size, modified: entry.modified, selected: index > 0,
-                            note: index == 0 ? "保留" : nil)
+                            note: index == 0 ? L("保留", "Keep") : nil)
                     }
                     groups.append(FileGroup(files: files))
                 }
@@ -190,7 +190,7 @@ enum ClutterScanner {
             let files = members.map { prints[$0].0 }.sorted { $0.size > $1.size }
             return FileGroup(
                 files: files.enumerated().map { index, e in
-                    ClutterFile(url: e.url, size: e.size, modified: e.modified, note: index == 0 ? "最清晰" : nil)
+                    ClutterFile(url: e.url, size: e.size, modified: e.modified, note: index == 0 ? L("最清晰", "Best") : nil)
                 })
         }
         .sorted { $0.files.count > $1.files.count }
@@ -228,14 +228,14 @@ final class ClutterModel: ObservableObject {
     @Published var result: CleanResult?
     private var flag: CancelFlag?
 
-    var rootName: String { root == FS.home ? "主目录（\(FS.home.lastPathComponent)）" : root.lastPathComponent }
+    var rootName: String { root == FS.home ? L("主目录（\(FS.home.lastPathComponent)）", "Home (\(FS.home.lastPathComponent))") : root.lastPathComponent }
 
     func chooseFolder() {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.directoryURL = root
-        panel.prompt = "选择"
+        panel.prompt = L("选择", "Choose")
         if panel.runModal() == .OK, let url = panel.url { root = url }
     }
 
@@ -246,24 +246,24 @@ final class ClutterModel: ObservableObject {
         self.flag = flag
         screen = .scanning
         progress = nil
-        status = "正在查看文件…"
+        status = L("正在查看文件…", "Looking at files…")
         let root = root
         let entries = await Task.detached(priority: .userInitiated) { [weak self] in
             ClutterScanner.walk(root: root, minSize: 100_000, cancel: flag) { count in
-                Task { @MainActor in self?.status = "已查看 \(count) 个文件" }
+                Task { @MainActor in self?.status = L("已查看 \(count) 个文件", "Checked \(plural(count, "file", "files"))") }
             }
         }.value
         guard !flag.isCancelled else { return }
         large = entries.filter { $0.size >= 100_000_000 }.sorted { $0.size > $1.size }
             .map { ClutterFile(url: $0.url, size: $0.size, modified: $0.modified) }
-        status = "正在比对重复文件…"
+        status = L("正在比对重复文件…", "Comparing duplicates…")
         duplicates = await Task.detached(priority: .userInitiated) { ClutterScanner.duplicates(entries, cancel: flag) }.value
         if includeSimilar {
-            status = "正在比对相似图片…"
+            status = L("正在比对相似图片…", "Comparing similar photos…")
             similar = await Task.detached(priority: .userInitiated) { [weak self] in
                 ClutterScanner.similarImages(entries, cancel: flag) { done, total in
                     Task { @MainActor in
-                        self?.status = "正在比对相似图片：\(done) / \(total)"
+                        self?.status = L("正在比对相似图片：\(done) / \(total)", "Comparing similar photos: \(done) / \(total)")
                         self?.progress = total > 0 ? Double(done) / Double(total) : nil
                     }
                 }
@@ -319,12 +319,12 @@ final class ClutterModel: ObservableObject {
         switch kind {
         case .large, .downloads:
             let list = files(kind)
-            return list.isEmpty ? "没有找到" : "\(list.count) 个 · \(FS.format(list.reduce(0) { $0 + $1.size }))"
+            return list.isEmpty ? L("没有找到", "None found") : L("\(list.count) 个 · \(FS.format(list.reduce(0) { $0 + $1.size }))", "\(list.count) · \(FS.format(list.reduce(0) { $0 + $1.size }))")
         case .duplicates:
             return duplicates.isEmpty
-                ? "没有找到" : "\(duplicates.count) 组 · 可省 \(FS.format(duplicates.reduce(0) { $0 + $1.files.dropFirst().reduce(0) { $0 + $1.size } }))"
+                ? L("没有找到", "None found") : L("\(duplicates.count) 组 · 可省 \(FS.format(duplicates.reduce(0) { $0 + $1.files.dropFirst().reduce(0) { $0 + $1.size } }))", "\(plural(duplicates.count, "group", "groups")) · save \(FS.format(duplicates.reduce(0) { $0 + $1.files.dropFirst().reduce(0) { $0 + $1.size } }))")
         case .similar:
-            return similar.isEmpty ? "没有找到" : "\(similar.count) 组 · \(similar.reduce(0) { $0 + $1.files.count }) 张"
+            return similar.isEmpty ? L("没有找到", "None found") : L("\(similar.count) 组 · \(similar.reduce(0) { $0 + $1.files.count }) 张", "\(plural(similar.count, "group", "groups")) · \(plural(similar.reduce(0) { $0 + $1.files.count }, "photo", "photos"))")
         }
     }
 
@@ -369,7 +369,7 @@ struct ClutterView: View {
             case .scanning:
                 VStack(spacing: 0) {
                     StageTopBar(title: module.title)
-                    ScanningStage(module: module, title: "正在整理…", detail: model.status, progress: model.progress) { model.stop() }
+                    ScanningStage(module: module, title: L("正在整理…", "Tidying up…"), detail: model.status, progress: model.progress) { model.stop() }
                 }
             case .overview:
                 overview
@@ -378,36 +378,36 @@ struct ClutterView: View {
             case .trashing:
                 VStack(spacing: 0) {
                     StageTopBar(title: module.title)
-                    ScanningStage(module: module, title: "正在移到废纸篓…", detail: "", stop: nil)
+                    ScanningStage(module: module, title: L("正在移到废纸篓…", "Moving to the Trash…"), detail: "", stop: nil)
                 }
             case .done:
                 VStack(spacing: 0) {
                     StageTopBar(title: module.title)
                     ResultStage(
-                        module: module, symbol: "checkmark.seal.fill", headline: "整理完成", subline: model.result?.summary ?? "",
-                        primaryTitle: "完成", primaryAction: { model.screen = .overview }
+                        module: module, symbol: "checkmark.seal.fill", headline: L("整理完成", "All Tidied Up"), subline: model.result?.summary ?? "",
+                        primaryTitle: L("完成", "Done"), primaryAction: { model.screen = .overview }
                     ) {
-                        PillButton(title: "打开废纸篓", icon: "trash") { NSWorkspace.shared.open(FS.url(".Trash")) }
+                        PillButton(title: L("打开废纸篓", "Open Trash"), icon: "trash") { NSWorkspace.shared.open(FS.url(".Trash")) }
                     }
                 }
             }
         }
-        .alert("移到废纸篓？", isPresented: $confirming) {
-            Button("移到废纸篓", role: .destructive) { model.trashSelected() }
-            Button("取消", role: .cancel) {}
+        .alert(L("移到废纸篓？", "Move to Trash?"), isPresented: $confirming) {
+            Button(L("移到废纸篓", "Move to Trash"), role: .destructive) { model.trashSelected() }
+            Button(L("取消", "Cancel"), role: .cancel) {}
         } message: {
-            Text("选中的 \(model.allSelected.count) 个文件（\(FS.format(model.allSelected.reduce(0) { $0 + $1.size }))）会被移到废纸篓，需要时可以放回。")
+            Text(L("选中的 \(model.allSelected.count) 个文件（\(FS.format(model.allSelected.reduce(0) { $0 + $1.size }))）会被移到废纸篓，需要时可以放回。", "\(model.allSelected.count) selected files (\(FS.format(model.allSelected.reduce(0) { $0 + $1.size }))) will be moved to the Trash. You can put them back if needed."))
         }
         .onChange(of: model.screen) { _, _ in disk.refresh() }
     }
 
     private var overview: some View {
         VStack(spacing: 0) {
-            StageTopBar(leadingTitle: "重新开始", leadingAction: { model.screen = .intro }, title: module.title)
+            StageTopBar(leadingTitle: L("重新开始", "Start Over"), leadingAction: { model.screen = .intro }, title: module.title)
             StageLayout(module: module, symbol: module.heroSymbol) {
                 VStack(alignment: .leading, spacing: 14) {
-                    Text("扫描了\(model.rootName)").font(.system(size: 30, weight: .bold)).lineLimit(2)
-                    Text("点开每一类看看，勾上不要的，统一移到废纸篓。")
+                    Text(L("扫描了\(model.rootName)", "Scanned \(model.rootName)")).font(.system(size: 30, weight: .bold)).lineLimit(2)
+                    Text(L("点开每一类看看，勾上不要的，统一移到废纸篓。", "Open each category, select what you don't need, and move it all to the Trash at once."))
                         .font(.system(size: 15))
                         .foregroundStyle(.white.opacity(0.78))
                     ForEach(ClutterKind.allCases) { kind in
@@ -418,7 +418,7 @@ struct ClutterView: View {
                 }
             } bottom: {
                 OrbButton(
-                    title: "移除", accent: module.accent, disabled: model.allSelected.isEmpty, action: { confirming = true })
+                    title: L("移除", "Remove"), accent: module.accent, disabled: model.allSelected.isEmpty, action: { confirming = true })
             }
         }
     }
@@ -432,8 +432,8 @@ struct FolderChooser: View {
 
     var body: some View {
         Menu {
-            Button("主目录", action: reset)
-            Button("选择文件夹…", action: choose)
+            Button(L("主目录", "Home"), action: reset)
+            Button(L("选择文件夹…", "Choose Folder…"), action: choose)
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "folder.fill")
@@ -473,11 +473,11 @@ struct ClutterDetail: View {
             }
         } footer: {
             let chosen = model.allSelected
-            Text("已选 \(chosen.count) 个，共 \(FS.format(chosen.reduce(0) { $0 + $1.size }))")
+            Text(L("已选 \(chosen.count) 个，共 \(FS.format(chosen.reduce(0) { $0 + $1.size }))", "\(chosen.count) selected, \(FS.format(chosen.reduce(0) { $0 + $1.size }))"))
                 .foregroundStyle(.white.opacity(0.75))
                 .monospacedDigit()
             Spacer()
-            ActionCapsule(title: "移到废纸篓", accent: accent, disabled: chosen.isEmpty, action: confirm)
+            ActionCapsule(title: L("移到废纸篓", "Move to Trash"), accent: accent, disabled: chosen.isEmpty, action: confirm)
         }
     }
 
@@ -497,7 +497,7 @@ struct ClutterDetail: View {
     private func fileList(_ files: Binding<[ClutterFile]>) -> some View {
         List {
             if files.wrappedValue.isEmpty {
-                Text("没有找到").foregroundStyle(.secondary).listRowBackground(Color.clear)
+                Text(L("没有找到", "None found")).foregroundStyle(.secondary).listRowBackground(Color.clear)
             }
             ForEach(files) { $file in
                 ClutterRow(file: $file, thumbnail: false).listRowBackground(Color.clear)
@@ -510,10 +510,10 @@ struct ClutterDetail: View {
     private func groupList(_ groups: Binding<[FileGroup]>, thumbnails: Bool) -> some View {
         List {
             if groups.wrappedValue.isEmpty {
-                Text("没有找到").foregroundStyle(.secondary).listRowBackground(Color.clear)
+                Text(L("没有找到", "None found")).foregroundStyle(.secondary).listRowBackground(Color.clear)
             }
             ForEach(groups) { $group in
-                ListHeader("\(group.files.count) 个 · 每个 \(FS.format(group.files.first?.size ?? 0))")
+                ListHeader(L("\(group.files.count) 个 · 每个 \(FS.format(group.files.first?.size ?? 0))", "\(plural(group.files.count, "file", "files")) · \(FS.format(group.files.first?.size ?? 0)) each"))
                 ForEach($group.files) { $file in
                     ClutterRow(file: $file, thumbnail: thumbnails).listRowBackground(Color.clear)
                 }
@@ -567,7 +567,7 @@ struct ClutterRow: View {
                 Image(systemName: "magnifyingglass")
             }
             .buttonStyle(.borderless)
-            .help("在 Finder 中显示")
+            .help(L("在 Finder 中显示", "Show in Finder"))
         }
         .padding(.vertical, 2)
     }

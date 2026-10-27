@@ -132,10 +132,10 @@ struct CleanResult: Identifiable {
 
     var summary: String {
         var parts: [String] = []
-        if trashedCount > 0 { parts.append("已将 \(trashedCount) 项（\(FS.format(trashedBytes))）移到废纸篓") }
-        if deletedCount > 0 { parts.append("已永久删除 \(deletedCount) 项，释放 \(FS.format(deletedBytes))") }
-        if parts.isEmpty { parts.append("没有清理任何项目") }
-        return parts.joined(separator: "；")
+        if trashedCount > 0 { parts.append(L("已将 \(trashedCount) 项（\(FS.format(trashedBytes))）移到废纸篓", "Moved \(plural(trashedCount, "item", "items")) (\(FS.format(trashedBytes))) to the Trash")) }
+        if deletedCount > 0 { parts.append(L("已永久删除 \(deletedCount) 项，释放 \(FS.format(deletedBytes))", "permanently deleted \(plural(deletedCount, "item", "items")), freeing \(FS.format(deletedBytes))")) }
+        if parts.isEmpty { parts.append(L("没有清理任何项目", "Nothing was cleaned")) }
+        return parts.joined(separator: L("；", "; "))
     }
 }
 
@@ -149,6 +149,13 @@ enum Cleaner {
 
     static func perform(_ targets: [Target]) -> CleanResult {
         var result = CleanResult()
+        if DebugFlags.readOnly {
+            result.trashedCount = targets.filter { !$0.permanent }.count
+            result.trashedBytes = targets.filter { !$0.permanent }.reduce(0) { $0 + $1.size }
+            result.deletedCount = targets.filter(\.permanent).count
+            result.deletedBytes = targets.filter(\.permanent).reduce(0) { $0 + $1.size }
+            return result
+        }
         // 先移废纸篓，再永久删除，避免顺序问题
         for t in targets.sorted(by: { !$0.permanent && $1.permanent }) {
             // 启动代理先从 launchd 卸载，否则删掉 plist 后进程还会一直跑到注销
@@ -176,6 +183,7 @@ enum Cleaner {
 enum LaunchAgents {
     /// launchctl bootout gui/<uid> <plist>；没加载时会失败，忽略即可。
     static func bootout(_ plist: URL) {
+        guard !DebugFlags.readOnly else { return }
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/bin/launchctl")
         p.arguments = ["bootout", "gui/\(getuid())", plist.path]

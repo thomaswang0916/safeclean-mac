@@ -4,13 +4,18 @@ import SwiftUI
 
 @MainActor
 final class DetectiveModel: ObservableObject {
-    enum Span: String, CaseIterable, Identifiable {
-        case day = "24 小时"
-        case week = "7 天"
-        case month = "30 天"
-        case all = "全部"
+    enum Span: CaseIterable, Identifiable {
+        case day, week, month, all
 
-        var id: String { rawValue }
+        var id: Self { self }
+        var title: String {
+            switch self {
+            case .day: L("24 小时", "24 Hours")
+            case .week: L("7 天", "7 Days")
+            case .month: L("30 天", "30 Days")
+            case .all: L("全部", "All")
+            }
+        }
         var seconds: Double? {
             switch self {
             case .day: 86400
@@ -95,19 +100,19 @@ final class DetectiveModel: ObservableObject {
             }
         case .admin(let command, _):
             Task {
-                let r = await Task.detached { Shell.runAsAdmin(command, prompt: "放心清理：\(item.title)") }.value
+                let r = await Task.detached { Shell.runAsAdmin(command, prompt: L("放心清理：\(item.title)", "SafeClean: \(item.title)")) }.value
                 if item.id == "spotlight" {
                     spotlightSize = r.ok ? r.output.split(separator: "\t").first.map { "\($0)B" } : nil
-                    message = r.ok ? nil : "没有完成（可能取消了密码框）"
+                    message = r.ok ? nil : L("没有完成（可能取消了密码框）", "Not completed (the password prompt may have been cancelled)")
                 } else {
-                    message = r.ok ? "已完成：\(item.title)" : "没有完成（可能取消了密码框）"
+                    message = r.ok ? L("已完成：\(item.title)", "Done: \(item.title)") : L("没有完成（可能取消了密码框）", "Not completed (the password prompt may have been cancelled)")
                     await inspectSystem()
                 }
             }
         case .shell(let command, _):
             Task {
                 let r = await Task.detached { Shell.run("/bin/sh", ["-c", command]) }.value
-                message = r.status == 0 ? "已完成：\(item.title)" : "没有完成：\(r.output.prefix(120))"
+                message = r.status == 0 ? L("已完成：\(item.title)", "Done: \(item.title)") : L("没有完成：\(r.output.prefix(120))", "Not completed: \(r.output.prefix(120))")
                 await inspectSystem()
             }
         }
@@ -149,14 +154,14 @@ struct DetectiveView: View {
     private var header: some View {
         HStack(alignment: .center, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("空间侦探").font(.system(size: 44, weight: .bold))
+                Text(L("空间侦探", "Space Detective")).font(.system(size: 44, weight: .bold))
                 Group {
                     if model.measuring {
-                        Text("正在测量：\(model.measuringPath)").lineLimit(1).truncationMode(.middle)
+                        Text(L("正在测量：\(model.measuringPath)", "Measuring: \(model.measuringPath)")).lineLimit(1).truncationMode(.middle)
                     } else if let last = model.snapshots.last {
-                        Text("上次记录 \(last.date.formatted(.relative(presentation: .named)))，共记录 \(model.snapshots.count) 次")
+                        Text(L("上次记录 \(last.date.formatted(Date.RelativeFormatStyle(presentation: .named, locale: appLocale)))，共记录 \(model.snapshots.count) 次", "Last recorded \(last.date.formatted(Date.RelativeFormatStyle(presentation: .named, locale: appLocale))) · \(plural(model.snapshots.count, "record", "records"))"))
                     } else {
-                        Text("还没有记录")
+                        Text(L("还没有记录", "No records yet"))
                     }
                 }
                 .font(.system(size: 14))
@@ -164,10 +169,10 @@ struct DetectiveView: View {
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 8) {
-                Toggle("后台每 3 小时记录一次", isOn: Binding(get: { model.backgroundEnabled }, set: { model.setBackground($0) }))
+                Toggle(L("后台每 3 小时记录一次", "Record every 3 hours in the background"), isOn: Binding(get: { model.backgroundEnabled }, set: { model.setBackground($0) }))
                     .toggleStyle(.switch)
-                    .help("在后台低优先级运行，不弹窗、不联网。关掉后会删除对应的启动项。")
-                PillButton(title: model.measuring ? "测量中…" : "立即记录", icon: "record.circle") {
+                    .help(L("在后台低优先级运行，不弹窗、不联网。关掉后会删除对应的启动项。", "Runs at low priority in the background, never shows a window or goes online. Turning it off removes the launch agent."))
+                PillButton(title: model.measuring ? L("测量中…", "Measuring…") : L("立即记录", "Record Now"), icon: "record.circle") {
                     Task { await model.record() }
                 }
                 .disabled(model.measuring)
@@ -181,10 +186,10 @@ struct DetectiveView: View {
         StatCard {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
-                    Label("空间去哪了", systemImage: "binoculars.fill").font(.system(size: 17, weight: .semibold))
+                    Label(L("空间去哪了", "Where Did My Space Go"), systemImage: "binoculars.fill").font(.system(size: 17, weight: .semibold))
                     Spacer()
-                    Picker("时间范围", selection: $model.span) {
-                        ForEach(DetectiveModel.Span.allCases) { Text($0.rawValue).tag($0) }
+                    Picker(L("时间范围", "Time range"), selection: $model.span) {
+                        ForEach(DetectiveModel.Span.allCases) { Text($0.title).tag($0) }
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
@@ -192,19 +197,19 @@ struct DetectiveView: View {
                 }
                 if let change = model.change {
                     HStack(alignment: .firstTextBaseline, spacing: 12) {
-                        Text(change.freeLost >= 0 ? "少了 \(FS.format(change.freeLost))" : "多出 \(FS.format(-change.freeLost))")
+                        Text(change.freeLost >= 0 ? L("少了 \(FS.format(change.freeLost))", "\(FS.format(change.freeLost)) less") : L("多出 \(FS.format(-change.freeLost))", "\(FS.format(-change.freeLost)) more"))
                             .font(.system(size: 34, weight: .bold))
                             .foregroundStyle(change.freeLost > 1_000_000_000 ? Color(hex: 0xFFB16B) : Color(hex: 0x6EE7B7))
                             .monospacedDigit()
-                        Text("可用空间 · \(change.from.formatted(.dateTime.month().day().hour().minute())) → \(change.to.formatted(.dateTime.month().day().hour().minute()))")
+                        Text(L("可用空间 · \(change.from.formatted(.dateTime.month().day().hour().minute().locale(appLocale))) → \(change.to.formatted(.dateTime.month().day().hour().minute().locale(appLocale)))", "free space · \(change.from.formatted(.dateTime.month().day().hour().minute().locale(appLocale))) → \(change.to.formatted(.dateTime.month().day().hour().minute().locale(appLocale)))"))
                             .font(.system(size: 13))
                             .foregroundStyle(.white.opacity(0.65))
                     }
                     Chart {
                         ForEach(Array(model.freeSeries.enumerated()), id: \.offset) { _, point in
-                            AreaMark(x: .value("时间", point.0), yStart: .value("下限", yDomain.lowerBound), yEnd: .value("可用 GB", point.1))
+                            AreaMark(x: .value(L("时间", "Time"), point.0), yStart: .value(L("下限", "Floor"), yDomain.lowerBound), yEnd: .value(L("可用 GB", "Free GB"), point.1))
                                 .foregroundStyle(LinearGradient(colors: [accent.opacity(0.4), .clear], startPoint: .top, endPoint: .bottom))
-                            LineMark(x: .value("时间", point.0), y: .value("可用 GB", point.1)).foregroundStyle(accent)
+                            LineMark(x: .value(L("时间", "Time"), point.0), y: .value(L("可用 GB", "Free GB"), point.1)).foregroundStyle(accent)
                         }
                     }
                     .chartYScale(domain: yDomain)
@@ -213,16 +218,16 @@ struct DetectiveView: View {
                     .chartXAxis { AxisMarks { AxisValueLabel().foregroundStyle(.white.opacity(0.6)) } }
                     .frame(height: 110)
                     HStack(alignment: .top, spacing: 24) {
-                        changeList(title: "哪里变大了", items: change.growth.filter { $0.delta > 0 }, revealable: true, empty: "没有明显变大的位置")
+                        changeList(title: L("哪里变大了", "What Grew"), items: change.growth.filter { $0.delta > 0 }, revealable: true, empty: L("没有明显变大的位置", "Nothing grew noticeably"))
                         changeList(
-                            title: "谁往硬盘写得最多", items: change.writers, revealable: false, empty: "这段时间没有程序大量写入",
-                            footnote: "写入量不等于占用（包括写了又删的临时文件），用来找“谁在一直写”。系统级进程需要管理员权限才看得到。")
+                            title: L("谁往硬盘写得最多", "Who Wrote the Most"), items: change.writers, revealable: false, empty: L("这段时间没有程序大量写入", "No program wrote much in this period"),
+                            footnote: L("写入量不等于占用（包括写了又删的临时文件），用来找“谁在一直写”。系统级进程需要管理员权限才看得到。", "Bytes written isn't the same as space used (it includes temp files written then deleted) — it shows who keeps writing. System processes need admin rights to see."))
                     }
                 } else {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(model.snapshots.isEmpty ? "正在做第一次记录…" : "需要至少两次记录才能对比")
+                        Text(model.snapshots.isEmpty ? L("正在做第一次记录…", "Taking the first record…") : L("需要至少两次记录才能对比", "Needs at least two records to compare"))
                             .font(.system(size: 20, weight: .semibold))
-                        Text("每次打开这个页面都会记一次（间隔超过 30 分钟时）。打开右上角的后台记录，就算不开应用也会每 3 小时记一次，下次空间突然变少时能直接看到是谁占的。")
+                        Text(L("每次打开这个页面都会记一次（间隔超过 30 分钟时）。打开右上角的后台记录，就算不开应用也会每 3 小时记一次，下次空间突然变少时能直接看到是谁占的。", "A record is taken each time you open this page (if 30+ minutes have passed). Turn on background recording at the top right to record every 3 hours even when the app is closed — next time space suddenly disappears, you'll see who took it."))
                             .font(.system(size: 13))
                             .foregroundStyle(.white.opacity(0.7))
                     }
@@ -273,11 +278,11 @@ struct DetectiveView: View {
         StatCard {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    Label("系统数据里是什么", systemImage: "cpu").font(.system(size: 17, weight: .semibold))
+                    Label(L("系统数据里是什么", "What's in System Data"), systemImage: "cpu").font(.system(size: 17, weight: .semibold))
                     Spacer()
                     if model.loadingSystem { ProgressView().controlSize(.small) }
                 }
-                Text("“设置 → 存储空间”里的“系统数据”是个大杂烩，这里把能找到的部分拆开说清楚。")
+                Text(L("“设置 → 存储空间”里的“系统数据”是个大杂烩，这里把能找到的部分拆开说清楚。", "\"System Data\" in Settings → Storage is a catch-all. Here are the parts we can identify, explained."))
                     .font(.system(size: 12))
                     .foregroundStyle(.white.opacity(0.6))
                 ForEach(model.systemItems) { item in
@@ -312,9 +317,9 @@ struct DetectiveView: View {
     private func actionLabel(_ action: SystemDataItem.Action) -> String? {
         switch action {
         case .none: nil
-        case .reveal: "在 Finder 中显示"
+        case .reveal: L("在 Finder 中显示", "Show in Finder")
         case .openURL(_, let label), .admin(_, let label), .shell(_, let label): label
-        case .gotoPerformance: "查看占内存的应用"
+        case .gotoPerformance: L("查看占内存的应用", "See Memory-Hungry Apps")
         }
     }
 
@@ -328,14 +333,14 @@ struct DetectiveView: View {
         let regrown = checked.reduce(0) { $0 + min($1.latest?.size ?? 0, $1.size) }
         return StatCard {
             VStack(alignment: .leading, spacing: 12) {
-                Label("白清检测", systemImage: "arrow.uturn.backward.circle").font(.system(size: 17, weight: .semibold))
-                Text("清理后过 1 天、7 天再量一次。很快长回来的缓存，清了也腾不出空间，以后在“清理”里默认不勾。")
+                Label(L("白清检测", "Pointless Cleanup Check"), systemImage: "arrow.uturn.backward.circle").font(.system(size: 17, weight: .semibold))
+                Text(L("清理后过 1 天、7 天再量一次。很快长回来的缓存，清了也腾不出空间，以后在“清理”里默认不勾。", "Cleaned items are re-measured after 1 and 7 days. Caches that grow right back free no space, so Cleanup stops selecting them by default."))
                     .font(.system(size: 12))
                     .foregroundStyle(.white.opacity(0.6))
                 if checked.isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(pending.isEmpty ? "还没有可复查的清理" : "\(pending.count) 项等待复查").font(.system(size: 20, weight: .semibold))
-                        Text(pending.isEmpty ? "在“清理”或“智能呵护”里清理一次，这里会开始跟踪。" : "最早的一项会在清理满一天后复查（打开这个页面或后台记录时）。")
+                        Text(pending.isEmpty ? L("还没有可复查的清理", "Nothing to re-check yet") : L("\(pending.count) 项等待复查", "\(plural(pending.count, "item", "items")) waiting to be re-checked")).font(.system(size: 20, weight: .semibold))
+                        Text(pending.isEmpty ? L("在“清理”或“智能呵护”里清理一次，这里会开始跟踪。", "Clean something in Cleanup or Smart Care and tracking starts here.") : L("最早的一项会在清理满一天后复查（打开这个页面或后台记录时）。", "The first check happens a day after cleaning (when you open this page or a background record runs)."))
                             .font(.system(size: 13))
                             .foregroundStyle(.white.opacity(0.7))
                     }
@@ -343,17 +348,17 @@ struct DetectiveView: View {
                     HStack(spacing: 24) {
                         VStack(alignment: .leading) {
                             Text(FS.format(cleaned)).font(.system(size: 26, weight: .bold)).monospacedDigit()
-                            Text("复查过的清理量").font(.system(size: 12)).foregroundStyle(.white.opacity(0.6))
+                            Text(L("复查过的清理量", "Cleaned & re-checked")).font(.system(size: 12)).foregroundStyle(.white.opacity(0.6))
                         }
                         VStack(alignment: .leading) {
                             Text(FS.format(regrown)).font(.system(size: 26, weight: .bold)).monospacedDigit()
                                 .foregroundStyle(Color(hex: 0xFFB16B))
-                            Text("又长回来了（\(cleaned > 0 ? Int(Double(regrown) / Double(cleaned) * 100) : 0)%）")
+                            Text(L("又长回来了（\(cleaned > 0 ? Int(Double(regrown) / Double(cleaned) * 100) : 0)%）", "Grew back (\(cleaned > 0 ? Int(Double(regrown) / Double(cleaned) * 100) : 0)%)"))
                                 .font(.system(size: 12))
                                 .foregroundStyle(.white.opacity(0.6))
                         }
                     }
-                    Text(pointless.isEmpty ? "没有发现白清的项目" : "白清的项目（以后默认不勾）")
+                    Text(pointless.isEmpty ? L("没有发现白清的项目", "No pointless cleanups found") : L("白清的项目（以后默认不勾）", "Pointless cleanups (unselected from now on)"))
                         .font(.system(size: 14, weight: .semibold))
                         .padding(.top, 4)
                     ForEach(pointless.prefix(10)) { entry in
@@ -366,7 +371,7 @@ struct DetectiveView: View {
                         }
                     }
                     if !pending.isEmpty {
-                        Text("另有 \(pending.count) 项等待复查").font(.system(size: 12)).foregroundStyle(.white.opacity(0.6))
+                        Text(L("另有 \(pending.count) 项等待复查", "\(pending.count) more waiting to be re-checked")).font(.system(size: 12)).foregroundStyle(.white.opacity(0.6))
                     }
                 }
             }

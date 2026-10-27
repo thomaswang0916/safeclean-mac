@@ -46,6 +46,7 @@ struct RootView: View {
         .animation(.easeInOut(duration: 0.3), value: state.module)
         .frame(minWidth: 1040, minHeight: 700)
         .preferredColorScheme(.dark)
+        .environment(\.locale, appLocale)
         .background(WindowConfigurator())
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             state.refreshPermissions()
@@ -82,7 +83,16 @@ struct Rail: View {
             }
             Spacer()
             RailButton(module: .stats, selected: selection == .stats) { selection = .stats }
-                .padding(.bottom, 6)
+            SettingsLink {
+                Image(systemName: "gearshape.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.72))
+                    .frame(width: 52, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help(L("设置", "Settings"))
+            .padding(.bottom, 6)
             DiskRing(disk: disk)
         }
         .padding(.top, 54)
@@ -153,13 +163,13 @@ struct DiskRing: View {
                 Image(systemName: "internaldrive.fill").font(.system(size: 13)).foregroundStyle(.white.opacity(0.85))
             }
             .frame(width: 40, height: 40)
-            Text("可用\n\(FS.format(disk.free))")
+            Text(L("可用\n\(FS.format(disk.free))", "Free\n\(FS.format(disk.free))"))
                 .font(.system(size: 10, weight: .medium))
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.white.opacity(0.7))
                 .monospacedDigit()
         }
-        .help("Macintosh HD：可用 \(FS.format(disk.free))，共 \(FS.format(disk.total))")
+        .help(L("Macintosh HD：可用 \(FS.format(disk.free))，共 \(FS.format(disk.total))", "Macintosh HD: \(FS.format(disk.free)) free of \(FS.format(disk.total))"))
     }
 }
 
@@ -173,6 +183,7 @@ struct WindowConfigurator: NSViewRepresentable {
             window.titleVisibility = .hidden
             window.styleMask.insert(.fullSizeContentView)
             window.isMovableByWindowBackground = true
+            if DebugFlags.readOnly { window.ignoresMouseEvents = true }
         }
         return view
     }
@@ -237,7 +248,7 @@ struct DetailFrame<Content: View, Footer: View>: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            StageTopBar(leadingTitle: "返回", leadingIcon: "chevron.left", leadingAction: back, title: title)
+            StageTopBar(leadingTitle: L("返回", "Back"), leadingIcon: "chevron.left", leadingAction: back, title: title)
             VStack(spacing: 0) {
                 content
                 Divider().overlay(Color.white.opacity(0.12))

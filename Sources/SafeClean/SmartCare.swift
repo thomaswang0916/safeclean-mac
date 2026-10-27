@@ -25,17 +25,17 @@ final class SmartCareModel: ObservableObject {
             cleanResult = nil
             clutterResult = nil
             stepIndex = 0
-            step = "查找系统垃圾"
+            step = L("查找系统垃圾", "Looking for system junk")
             await state.junk.runScan()
             stepIndex = 1
-            step = "查找下载文件夹里的重复文件"
+            step = L("查找下载文件夹里的重复文件", "Looking for duplicates in Downloads")
             await state.clutter.scanDownloadDuplicates()
             stepIndex = 2
-            step = "分析性能"
+            step = L("分析性能", "Analyzing performance")
             await state.performance.analyze()
             state.performance.screen = .overview
             stepIndex = 3
-            step = "检查应用更新"
+            step = L("检查应用更新", "Checking for app updates")
             await state.apps.load()
             await state.updates.check(apps: state.apps.apps)
             state.apps.screen = .overview
@@ -79,13 +79,13 @@ struct SmartCareView: View {
             VStack(spacing: 0) {
                 StageTopBar(title: module.title)
                 ScanningStage(
-                    module: module, title: "正在全面检查…", detail: "第 \(model.stepIndex + 1) / \(SmartCareModel.stepCount) 步：\(model.step)",
+                    module: module, title: L("正在全面检查…", "Running a full check…"), detail: L("第 \(model.stepIndex + 1) / \(SmartCareModel.stepCount) 步：\(model.step)", "Step \(model.stepIndex + 1) of \(SmartCareModel.stepCount): \(model.step)"),
                     progress: progress, stop: nil)
             }
         case .running:
             VStack(spacing: 0) {
                 StageTopBar(title: module.title)
-                ScanningStage(module: module, title: "正在运行…", detail: "清理垃圾、移除重复下载", stop: nil)
+                ScanningStage(module: module, title: L("正在运行…", "Running…"), detail: L("清理垃圾、移除重复下载", "Cleaning junk and removing duplicate downloads"), stop: nil)
             }
         case .ready, .done:
             dashboard
@@ -100,44 +100,44 @@ struct SmartCareView: View {
     private var dashboard: some View {
         let done = model.phase == .done
         return VStack(spacing: 0) {
-            StageTopBar(leadingTitle: "重新开始", leadingAction: { model.phase = .idle }, title: module.title)
-            Text(done ? "做得好！你的 Mac 状态良好" : "检查完了，这些可以处理")
+            StageTopBar(leadingTitle: L("重新开始", "Start Over"), leadingAction: { model.phase = .idle }, title: module.title)
+            Text(done ? L("做得好！你的 Mac 状态良好", "Well done! Your Mac is in good shape") : L("检查完了，这些可以处理", "Check complete — here's what you can take care of"))
                 .font(.system(size: 34, weight: .bold))
                 .padding(.top, 18)
                 .padding(.bottom, 22)
             Grid(horizontalSpacing: 18, verticalSpacing: 18) {
                 GridRow {
-                    SmartCard(module: .cleanup, title: "清理", value: cleanValue(done: done)) {
+                    SmartCard(module: .cleanup, title: L("清理", "Cleanup"), value: cleanValue(done: done)) {
                         if done, let r = model.cleanResult, r.trashedCount + r.deletedCount > 0 {
-                            DoneChip(text: "已清理")
+                            DoneChip(text: L("已清理", "Cleaned"))
                         } else if done {
-                            DoneChip(text: "没有需要清理的", color: .white.opacity(0.75))
+                            DoneChip(text: L("没有需要清理的", "Nothing to clean"), color: .white.opacity(0.75))
                         } else {
-                            StatusText("运行后移到废纸篓")
+                            StatusText(L("运行后移到废纸篓", "Moves to the Trash when you run"))
                         }
                     } open: { state.module = .cleanup }
-                    SmartCard(module: .clutter, title: "整理杂乱", value: clutterValue(done: done)) {
+                    SmartCard(module: .clutter, title: L("整理杂乱", "My Clutter"), value: clutterValue(done: done)) {
                         if done, model.clutterResult != nil {
-                            DoneChip(text: "已移除")
+                            DoneChip(text: L("已移除", "Removed"))
                         } else if done || model.duplicateCount == 0 {
-                            DoneChip(text: "下载文件夹很整齐", color: .white.opacity(0.75))
+                            DoneChip(text: L("下载文件夹很整齐", "Downloads is tidy"), color: .white.opacity(0.75))
                         } else {
-                            StatusText("每组保留最早的一份")
+                            StatusText(L("每组保留最早的一份", "Keeps the oldest copy of each"))
                         }
                     } open: { state.module = .clutter }
                 }
                 GridRow {
                     SmartCard(
-                        module: .performance, title: "性能",
-                        value: state.performance.heavyCount > 0 ? "\(state.performance.heavyCount) 个高耗能应用" : "运行顺畅"
+                        module: .performance, title: L("性能", "Performance"),
+                        value: state.performance.heavyCount > 0 ? L("\(state.performance.heavyCount) 个高耗能应用", "\(plural(state.performance.heavyCount, "heavy app", "heavy apps"))") : L("运行顺畅", "Running smoothly")
                     ) {
-                        StatusText("内存已用 \(FS.format(state.performance.memoryUsed))，点开看维护任务")
+                        StatusText(L("内存已用 \(FS.format(state.performance.memoryUsed))，点开看维护任务", "\(FS.format(state.performance.memoryUsed)) memory used — open for maintenance tasks"))
                     } open: { state.module = .performance }
                     SmartCard(
-                        module: .applications, title: "应用程序",
-                        value: state.updates.updates.isEmpty ? "都是最新版" : "\(state.updates.updates.count) 个可更新"
+                        module: .applications, title: L("应用程序", "Applications"),
+                        value: state.updates.updates.isEmpty ? L("都是最新版", "All up to date") : L("\(state.updates.updates.count) 个可更新", "\(plural(state.updates.updates.count, "update", "updates"))")
                     ) {
-                        StatusText(state.updates.updates.isEmpty ? "检查了 \(state.updates.checkable) 个应用" : "点开逐个更新")
+                        StatusText(state.updates.updates.isEmpty ? L("检查了 \(state.updates.checkable) 个应用", "Checked \(plural(state.updates.checkable, "app", "apps"))") : L("点开逐个更新", "Open to update them"))
                     } open: {
                         state.apps.screen = state.updates.updates.isEmpty ? .overview : .updater
                         state.module = .applications
@@ -146,7 +146,7 @@ struct SmartCareView: View {
             }
             .padding(.horizontal, 40)
             .frame(maxHeight: .infinity)
-            OrbButton(title: done ? "完成" : "运行", accent: module.accent) {
+            OrbButton(title: done ? L("完成", "Done") : L("运行", "Run"), accent: module.accent) {
                 if done { model.phase = .idle } else { model.run() }
             }
             .frame(height: 170)
@@ -156,13 +156,13 @@ struct SmartCareView: View {
     }
 
     private func cleanValue(done: Bool) -> String {
-        if done, let r = model.cleanResult { return FS.format(r.trashedBytes + r.deletedBytes) + " 的垃圾" }
-        return FS.format(state.junk.selectedSize) + " 的垃圾"
+        if done, let r = model.cleanResult { return FS.format(r.trashedBytes + r.deletedBytes) + L(" 的垃圾", " of junk") }
+        return FS.format(state.junk.selectedSize) + L(" 的垃圾", " of junk")
     }
 
     private func clutterValue(done: Bool) -> String {
-        if done, let r = model.clutterResult { return "\(r.trashedCount) 个重复下载" }
-        return model.duplicateCount > 0 ? "\(model.duplicateCount) 个重复下载" : "没有重复下载"
+        if done, let r = model.clutterResult { return L("\(r.trashedCount) 个重复下载", "\(plural(r.trashedCount, "duplicate download", "duplicate downloads"))") }
+        return model.duplicateCount > 0 ? L("\(model.duplicateCount) 个重复下载", "\(plural(model.duplicateCount, "duplicate download", "duplicate downloads"))") : L("没有重复下载", "No duplicate downloads")
     }
 }
 
@@ -215,6 +215,6 @@ struct SmartCard<Status: View>: View {
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
-        .help("打开\(module.title)")
+        .help(L("打开\(module.title)", "Open \(module.title)"))
     }
 }
