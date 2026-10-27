@@ -304,6 +304,8 @@ struct StatsView: View {
                             .font(.system(size: 13))
                             .foregroundStyle(.white.opacity(0.75))
                             .monospacedDigit()
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
                     }
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {

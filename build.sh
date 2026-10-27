@@ -3,6 +3,7 @@
 #
 # 可选环境变量：
 #   BUNDLE_ID      应用的 bundle id（默认见下方）
+#   UNIVERSAL=1    同时编译 Apple 芯片和 Intel 版本
 #   SIGN_IDENTITY  用来签名的证书名或 SHA-1；不设置时会找名为 "SafeClean Local Signing" 的本地证书，
 #                  找不到就用临时签名（ad-hoc）。用固定证书签名的好处：系统权限（完全磁盘访问等）
 #                  跟着证书走，重新编译后不用再授权。
@@ -13,11 +14,22 @@ APP="SafeClean.app"
 BUILD=".build/bundle"
 BUNDLE_ID="${BUNDLE_ID:-io.github.thomaswang0916.SafeClean}"
 
-swift build -c release
+# UNIVERSAL=1：同时编译 Apple 芯片和 Intel（发布用）
+if [ "${UNIVERSAL:-0}" = "1" ]; then
+  # 分别编译两种架构再合并（只装了命令行工具时不能一次编多个架构）
+  swift build -c release --triple arm64-apple-macosx14.0
+  swift build -c release --triple x86_64-apple-macosx14.0
+  BINARY=.build/universal/SafeClean
+  mkdir -p .build/universal
+  lipo -create .build/arm64-apple-macosx/release/SafeClean .build/x86_64-apple-macosx/release/SafeClean -output "$BINARY"
+else
+  swift build -c release
+  BINARY=.build/release/SafeClean
+fi
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$BUILD"
-cp .build/release/SafeClean "$APP/Contents/MacOS/SafeClean"
+cp "$BINARY" "$APP/Contents/MacOS/SafeClean"
 
 # 图标只在第一次生成
 if [ ! -f "$BUILD/AppIcon.icns" ]; then

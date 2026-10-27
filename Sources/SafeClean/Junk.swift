@@ -361,6 +361,7 @@ final class JunkModel: ObservableObject {
     @Published var scanningTitle = ""
     @Published var progress: Double = 0
     @Published var result: CleanResult?
+    @Published var showDetails = false
 
     var busy: Bool { phase == .scanning || phase == .cleaning }
     var total: Int64 { categories.reduce(0) { $0 + $1.total } }
@@ -458,7 +459,6 @@ final class JunkModel: ObservableObject {
 struct CleanupView: View {
     @ObservedObject var model: JunkModel
     @ObservedObject var disk: DiskModel
-    @State private var showDetails = false
     @State private var confirming = false
     @State private var showFailures = false
     private let module = Module.cleanup
@@ -479,7 +479,7 @@ struct CleanupView: View {
                         detail: model.scanningTitle.isEmpty ? L("准备中", "Getting ready") : L("正在查看：\(model.scanningTitle)", "Looking at: \(model.scanningTitle)"),
                         progress: model.progress, stop: nil)
                 }
-            case .ready where showDetails:
+            case .ready where model.showDetails:
                 details
             case .ready:
                 summary
@@ -494,7 +494,7 @@ struct CleanupView: View {
         }
         .alert(L("确认清理", "Clean Up?"), isPresented: $confirming) {
             Button(L("清理", "Clean"), role: .destructive) {
-                showDetails = false
+                model.showDetails = false
                 model.clean()
             }
             Button(L("取消", "Cancel"), role: .cancel) {}
@@ -524,14 +524,14 @@ struct CleanupView: View {
                     }
                     .padding(14)
                     .glass(cornerRadius: 16)
-                    PillButton(title: L("查看详情", "Review Details"), icon: "list.bullet") { showDetails = true }
+                    PillButton(title: L("查看详情", "Review Details"), icon: "list.bullet") { model.showDetails = true }
                 }
             }
         }
     }
 
     private var details: some View {
-        DetailFrame(title: L("清理详情", "Cleanup Details"), back: { showDetails = false }) {
+        DetailFrame(title: L("清理详情", "Cleanup Details"), back: { model.showDetails = false }) {
             List {
                 ForEach($model.categories) { $cat in
                     if !cat.items.isEmpty {

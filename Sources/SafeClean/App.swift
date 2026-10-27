@@ -233,6 +233,11 @@ enum SelfTest {
         static var env: [String: String] { ProcessInfo.processInfo.environment }
 
         @MainActor static func run(state: AppState) async {
+            if let demo = env["SAFECLEAN_DEMO"] {
+                let root = URL(fileURLWithPath: env["SAFECLEAN_ROOT"] ?? FS.home.path)
+                await DemoDirector.run(state: state, output: URL(fileURLWithPath: demo), lensRoot: root)
+                return
+            }
             guard let path = env["SAFECLEAN_SNAPSHOT"] else { return }
             state.module = Module(rawValue: env["SAFECLEAN_MODULE"] ?? "") ?? .smartCare
             let stage = env["SAFECLEAN_STAGE"] ?? "intro"

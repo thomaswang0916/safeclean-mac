@@ -37,6 +37,8 @@ final class DetectiveModel: ObservableObject {
     @Published var backgroundEnabled = BackgroundRecorder.isEnabled
     @Published var message: String?
     @Published var spotlightSize: String?
+    /// 演示脚本用：滚动到 "top" / "cards"
+    @Published var scrollTarget: String?
     fileprivate(set) var appeared = false
     fileprivate(set) var isSample = false
 
@@ -125,9 +127,10 @@ struct DetectiveView: View {
     private let accent = Module.detective.accent
 
     var body: some View {
+        ScrollViewReader { proxy in
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                header
+                header.id("top")
                 if let message = model.message {
                     Label(message, systemImage: "info.circle")
                         .font(.system(size: 13))
@@ -140,10 +143,16 @@ struct DetectiveView: View {
                     systemCard.frame(maxWidth: .infinity)
                     regrowthCard.frame(maxWidth: .infinity)
                 }
+                .id("cards")
             }
             .padding(.horizontal, 32)
             .padding(.top, 34)
             .padding(.bottom, 24)
+        }
+        .onChange(of: model.scrollTarget) { _, target in
+            guard let target else { return }
+            withAnimation(.easeInOut(duration: 1.2)) { proxy.scrollTo(target, anchor: .top) }
+        }
         }
         .foregroundStyle(.white)
         .task { await model.appear() }

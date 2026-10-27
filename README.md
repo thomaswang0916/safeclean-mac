@@ -1,50 +1,60 @@
-# 放心清理 · SafeClean for Mac
+# SafeClean for Mac
 
-一个原生 SwiftUI 写的 macOS 清理工具：清垃圾、卸载应用、找重复文件、看磁盘空间被谁占了。所有删除默认都先移到废纸篓，随时能放回。
+**English** · [简体中文](README.zh-CN.md)
 
-A native SwiftUI Mac cleaner — junk cleanup, app uninstaller, duplicate finder, disk space map. Everything goes to the Trash first, so it's always recoverable.
+A free, open-source Mac cleaner written in SwiftUI. Clean junk, uninstall apps completely, find duplicates, and see exactly where your disk space went. Everything goes to the Trash first, so nothing is ever lost by accident.
 
-![空间侦探](docs/screenshots/detective.jpg)
+**[⬇️ Download the latest release](https://github.com/thomaswang0916/safeclean-mac/releases/latest)** · **[▶️ Watch the 1-minute demo](https://github.com/thomaswang0916/safeclean-mac/releases/latest/download/SafeClean-demo-en.mp4)**
 
-## 空间侦探：回答论坛里问得最多的三个问题
+![Space Detective](docs/screenshots/en/detective.jpg)
 
-- **“空间一夜之间少了几十 G，被谁吃了？”** 定期记录可用空间、各位置大小和**每个程序往硬盘写了多少**，直接告诉你“过去 24 小时少了 29 GB：Docker 长了 21 GB，WeChat 写了 8 GB”。可以开后台记录（每 3 小时一次，低优先级，不联网）。
-- **“系统数据为什么这么大？”** 把“设置 → 存储空间”里的“系统数据”拆开：本地快照、待安装的系统更新、交换文件、休眠镜像、崩溃转储、系统资源下载、临时文件、Docker 虚拟磁盘、模拟器、Spotlight 索引，每项写明能不能动、怎么处理。
-- **“清理软件是不是白清？”** 清理后过 1 天、7 天复查。很快长回来的缓存（清了也腾不出空间）会被标记出来，以后在“清理”里默认不勾。
+## Space Detective: answers to the most common Mac storage questions
 
-![智能呵护](docs/screenshots/smartCare.jpg)
+- **"I lost 40 GB overnight. What took it?"** SafeClean records free space, the size of key locations and **how much each app has written to disk**. It tells you things like "29 GB less in the last 24 hours: Docker grew 21 GB, WeChat wrote 8 GB." Optional background recording runs every 3 hours at low priority and never goes online.
+- **"Why is System Data so big?"** It breaks down the "System Data" bar in Settings → Storage: local snapshots, a downloaded macOS update waiting to install, swap, the sleep image, crash dumps, system asset downloads, temp files, Docker's virtual disk, simulators and the Spotlight index. Each item explains whether it's safe to touch and how.
+- **"Do cleaners even help?"** Cleaned items are re-measured after 1 and 7 days. Caches that grow right back (cleaning them frees nothing) are flagged and no longer selected by default.
 
-## 功能
+![Smart Care](docs/screenshots/en/smartCare.jpg)
 
-| 模块 | 做什么 |
+## Features
+
+| Module | What it does |
 | --- | --- |
-| 智能呵护 | 一次扫描清理、重复下载、性能和应用更新，仪表盘汇总；“运行”只清理默认勾选的垃圾和重复下载的副本 |
-| 清理 | 应用缓存（含沙盒容器）、日志、Electron 和开发工具缓存、Xcode 垃圾、失效启动项、损坏的偏好设置、聊天软件缓存、本地 AI 模型、废纸篓 |
-| 性能 | 维护任务（释放内存、刷新 DNS、重建 Spotlight 和“打开方式”、重置快速查看）、后台启动项开关、高耗能应用 |
-| 应用程序 | 彻底卸载（含登录项、扩展、App Group、启动代理等残留）、检查更新（Sparkle appcast 和 App Store） |
-| 整理杂乱 | 大文件、重复文件（内容哈希）、相似图片（系统 Vision 图像特征）、30 天以上的旧下载 |
-| 空间透镜 | 方块图显示空间分布，点文件夹逐层进入，勾选后移到废纸篓 |
-| 空间侦探 | 空间变化追踪 + 写入进程归因、系统数据拆解、白清检测 |
-| 统计数据 | Mac 健康度、累计清理量、处理记录、优化建议（比如 90 天没打开的应用） |
+| Smart Care | One scan for junk, duplicate downloads, performance and app updates, summarized on a dashboard. "Run" only cleans what's selected by default. |
+| Cleanup | App caches (including sandbox containers), logs, Electron and developer caches, Xcode junk, broken launch agents, damaged preferences, chat app caches, local AI models, Trash |
+| Performance | Maintenance tasks (free up RAM, flush DNS, reindex Spotlight, rebuild "Open With", reset Quick Look), background item switches, heavy consumers |
+| Applications | Complete uninstall (login items, extensions, App Groups, launch agents and other leftovers) and update checks (Sparkle appcasts and the App Store) |
+| My Clutter | Large files, duplicates (content hash), similar photos (Apple Vision feature prints), downloads older than 30 days |
+| Space Lens | A treemap of what's taking space. Drill into folders, select, move to Trash. |
+| Space Detective | Space change tracking with per-app attribution, System Data breakdown, pointless-cleanup detection |
+| Statistics | Mac health, total cleaned, history and recommendations (such as apps unopened for 90+ days) |
 
 | | |
 | --- | --- |
-| ![清理](docs/screenshots/cleanup.jpg) | ![空间透镜](docs/screenshots/spaceLens.jpg) |
-| ![整理杂乱](docs/screenshots/clutter.jpg) | ![统计数据](docs/screenshots/stats.jpg) |
+| ![Cleanup](docs/screenshots/en/cleanup.jpg) | ![Space Lens](docs/screenshots/en/spaceLens.jpg) |
+| ![My Clutter](docs/screenshots/en/clutter.jpg) | ![Statistics](docs/screenshots/en/stats.jpg) |
 
-## 安全设计
+The interface is in English by default. Switch to Simplified Chinese in **Settings (⌘,)**.
 
-- 除了“废纸篓”这一类（会二次确认、默认不勾），所有清理都是**移到废纸篓**
-- 默认只勾选删了也会自动重新生成的东西；有代价的（正在运行的应用的缓存、浏览器内核、聊天缓存、AI 模型、iOS 备份）默认不勾，并写明删了会怎样
-- 重复文件跳过 Git 仓库、依赖和构建目录、剪辑软件素材库，每组保留最早的一份
-- 卸载前要求先退出应用；和别的应用共享的 App Group 默认不勾
-- 需要管理员权限的维护任务用 macOS 自己的密码框，应用拿不到密码
-- 空间侦探的记录只存在本机 `~/Library/Application Support/SafeClean/`；后台记录默认关闭，关掉时会删除对应的启动项
-- 不联网上传任何数据；联网只用于检查应用更新（读取应用自己声明的 Sparkle 更新源和 App Store 公开接口）
+## Safety by design
 
-## 安装和编译
+- Everything is **moved to the Trash**, except the Trash category itself (which asks again and is never selected by default)
+- Only things that regenerate on their own are selected by default. Anything with a cost (caches of running apps, browser engines, chat caches, AI models, iOS backups) stays unselected, with an explanation of what happens if you delete it
+- Duplicate detection skips Git repositories, dependency and build folders, and video-editor libraries, and always keeps the oldest copy
+- Apps must be quit before uninstalling; App Groups shared with other apps stay unselected
+- Maintenance tasks that need admin rights use the macOS password prompt. SafeClean never sees your password
+- Space Detective data stays on your Mac in `~/Library/Application Support/SafeClean/`. Background recording is off by default and turning it off removes its launch agent
+- Nothing is uploaded. The only network access is checking for app updates (the Sparkle feeds apps declare, and Apple's public App Store lookup)
 
-需要 macOS 14 以上、Xcode 命令行工具（`xcode-select --install`）。
+## Install
+
+**Download:** grab `SafeClean.zip` from the [latest release](https://github.com/thomaswang0916/safeclean-mac/releases/latest), unzip it and move `SafeClean.app` to Applications. Runs on macOS 14 or later, on Apple silicon and Intel.
+
+The app isn't notarized by Apple, so macOS blocks it the first time. Right-click `SafeClean.app` and choose **Open**. On macOS 15 or later, try to open it once, then go to System Settings → Privacy & Security and click **Open Anyway**.
+
+To scan the Trash, Mail attachments and iOS backups, add `SafeClean.app` under System Settings → Privacy & Security → **Full Disk Access** (the banner at the top of the app links straight there).
+
+**Build from source** (needs the Xcode Command Line Tools: `xcode-select --install`):
 
 ```bash
 git clone https://github.com/thomaswang0916/safeclean-mac.git
@@ -53,33 +63,27 @@ cd safeclean-mac
 open SafeClean.app
 ```
 
-首次打开如果被系统拦截，右键 `SafeClean.app` 选“打开”。
+`build.sh` signs ad hoc by default, so macOS treats every rebuild as a new app and asks for permissions again. To avoid that, create a self-signed code-signing certificate named **SafeClean Local Signing** in Keychain Access (Certificate Assistant → Create a Certificate, type "Code Signing"), or pass any identity via `SIGN_IDENTITY`. Set `UNIVERSAL=1` to build for both Apple silicon and Intel.
 
-想扫描废纸篓、邮件附件、iOS 备份，需要在「系统设置 → 隐私与安全性 → 完全磁盘访问权限」里加入 `SafeClean.app`（应用顶部的“去设置”按钮会直接跳过去）。
-
-### 签名小技巧
-
-`build.sh` 默认用临时签名，这样每次重新编译后系统会把它当成新应用，需要重新授权。想避免这个问题，可以在钥匙串里建一个名为 **SafeClean Local Signing** 的自签名代码签名证书（钥匙串访问 → 证书助理 → 创建证书，类型选“代码签名”），`build.sh` 会自动用它签名。也可以用 `SIGN_IDENTITY` 环境变量指定其他证书。
-
-## 命令行
+## Command line
 
 ```bash
-# 只读自检：列出每类垃圾的数量和大小，不删除任何东西
+# Read-only self-test: lists every junk category with counts and sizes, deletes nothing
 SafeClean.app/Contents/MacOS/SafeClean --selftest
 
-# 记录一次空间快照（后台记录就是定时调用它）
+# Take one Space Detective snapshot (what background recording runs)
 SafeClean.app/Contents/MacOS/SafeClean --snapshot
 
-# 把东西从废纸篓放回原处（只接受废纸篓里的路径，原位置已有东西时拒绝）
-SafeClean.app/Contents/MacOS/SafeClean --put-back ~/.Trash/某个文件 ~/原来的位置/某个文件
+# Put something back from the Trash (only accepts paths inside ~/.Trash, never overwrites)
+SafeClean.app/Contents/MacOS/SafeClean --put-back ~/.Trash/some-file ~/original/location/some-file
 ```
 
-## 说明
+## Notes
 
-界面布局参考了 CleanMyMac 的设计思路（左侧图标栏、每个模块一种渐变配色、底部圆形主按钮），插画和图标全部用系统 SF Symbols 和渐变绘制。本项目与 MacPaw 及 CleanMyMac 没有任何关系。
+The layout takes inspiration from CleanMyMac (an icon rail, a gradient per module, a round action button). All artwork is drawn with SF Symbols and gradients. This project is not affiliated with MacPaw or CleanMyMac.
 
-没有做：病毒扫描（需要专业病毒库）、云盘清理、菜单栏小工具。
+Not included: malware scanning (it needs a professional malware database), cloud storage cleanup, a menu bar app.
 
-## 许可证
+## License
 
 [MIT](LICENSE)
