@@ -291,7 +291,9 @@ struct OrbButton: View {
         .buttonStyle(.plain)
         .disabled(disabled)
         .opacity(disabled ? 0.5 : 1)
+        .demoTarget("orb")
         .onAppear {
+            guard !DebugFlags.readOnly else { return }
             withAnimation(.easeOut(duration: 1.9).repeatForever(autoreverses: false)) { pulse = true }
         }
     }
@@ -319,6 +321,7 @@ struct PillButton: View {
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
+        .demoTarget("pill:" + title)
     }
 }
 
@@ -508,3 +511,44 @@ enum DebugFlags {
         static let readOnly = false
     #endif
 }
+
+// MARK: - 演示视频用的点击目标
+
+/// 录演示视频时记下按钮在窗口里的位置（左上角为原点），合成器据此把鼠标移过去。正式版里什么都不做。
+enum DemoTargets {
+    nonisolated(unsafe) static var frames: [String: (rect: CGRect, owner: UUID)] = [:]
+
+    static var snapshot: [String: CGRect] { frames.mapValues(\.rect) }
+}
+
+extension View {
+    func demoTarget(_ id: String) -> some View {
+        #if DEBUG
+            modifier(DemoTargetModifier(id: id))
+        #else
+            self
+        #endif
+    }
+}
+
+#if DEBUG
+    private struct DemoTargetModifier: ViewModifier {
+        let id: String
+        @State private var owner = UUID()
+
+        func body(content: Content) -> some View {
+            if DebugFlags.readOnly {
+                content.background(
+                    GeometryReader { geo in
+                        let frame = geo.frame(in: .global)
+                        Color.clear
+                            .onAppear { DemoTargets.frames[id] = (frame, owner) }
+                            .onChange(of: frame) { _, f in DemoTargets.frames[id] = (f, owner) }
+                            .onDisappear { if DemoTargets.frames[id]?.owner == owner { DemoTargets.frames[id] = nil } }
+                    })
+            } else {
+                content
+            }
+        }
+    }
+#endif

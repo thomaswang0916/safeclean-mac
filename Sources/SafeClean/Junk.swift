@@ -680,5 +680,6 @@ struct ItemRow: View {
             .help(L("在 Finder 中显示", "Show in Finder"))
         }
         .help(FS.abbreviate(item.url.path))
+        .demoTarget("item:" + item.name)
     }
 }

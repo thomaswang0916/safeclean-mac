@@ -383,6 +383,14 @@ struct TreemapView: View {
                     }
                     .frame(width: max(tile.rect.width - 4, 0), height: max(tile.rect.height - 4, 0))
                     .offset(x: tile.rect.minX + 2, y: tile.rect.minY + 2)
+                    // offset 不改变布局位置，演示用的目标框单独按实际位置摆
+                    .background(alignment: .topLeading) {
+                        Color.clear
+                            .frame(width: max(tile.rect.width - 4, 0), height: max(tile.rect.height - 4, 0))
+                            .demoTarget("tile:" + tile.title)
+                            .padding(.leading, tile.rect.minX + 2)
+                            .padding(.top, tile.rect.minY + 2)
+                    }
                     .contextMenu {
                         if let n = tile.node {
                             Button(model.selection.contains(n.url) ? L("取消勾选", "Deselect") : L("勾选", "Select")) { model.toggle(n) }

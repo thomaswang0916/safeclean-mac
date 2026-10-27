@@ -128,6 +128,7 @@ struct RailButton: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .demoTarget("rail:" + module.rawValue)
         .onHover { hovering = $0 }
         .help(module.title)
         .overlay(alignment: .leading) {

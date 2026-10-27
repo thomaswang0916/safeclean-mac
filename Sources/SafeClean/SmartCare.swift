@@ -15,6 +15,10 @@ final class SmartCareModel: ObservableObject {
     unowned let state: AppState
 
     static let stepCount = 4
+    #if DEBUG
+        /// 录演示视频时直接指定进度环
+        @Published var demoProgress: Double?
+    #endif
 
     init(state: AppState) { self.state = state }
 
@@ -93,6 +97,9 @@ struct SmartCareView: View {
     }
 
     private var progress: Double {
+        #if DEBUG
+            if let p = model.demoProgress { return p }
+        #endif
         let junk = model.stepIndex == 0 ? state.junk.progress : 1
         return (Double(model.stepIndex) + (model.stepIndex == 0 ? junk : 0.5)) / Double(SmartCareModel.stepCount)
     }
@@ -214,6 +221,7 @@ struct SmartCard<Status: View>: View {
             .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         }
         .buttonStyle(.plain)
+        .demoTarget("card:" + module.rawValue)
         .onHover { hovering = $0 }
         .help(L("打开\(module.title)", "Open \(module.title)"))
     }

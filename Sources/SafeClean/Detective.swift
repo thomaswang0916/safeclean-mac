@@ -138,10 +138,10 @@ struct DetectiveView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .glass(cornerRadius: 12, opacity: 0.1)
                 }
-                changeCard
+                changeCard.demoTarget("det:change")
                 HStack(alignment: .top, spacing: 18) {
-                    systemCard.frame(maxWidth: .infinity)
-                    regrowthCard.frame(maxWidth: .infinity)
+                    systemCard.frame(maxWidth: .infinity).demoTarget("det:system")
+                    regrowthCard.frame(maxWidth: .infinity).demoTarget("det:regrowth")
                 }
                 .id("cards")
             }
